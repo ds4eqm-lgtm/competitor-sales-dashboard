@@ -1,0 +1,14 @@
+{
+  "intervalMinutes": 60,
+  "largeChange": 1000,
+  "syncWindowMinutes": 10,
+  "staleMinutes": 180,
+  "updatedAt": "",
+  "categories": [
+    "데코타일",
+    "장판",
+    "강화마루",
+    "필름",
+    "기타"
+  ]
+}
