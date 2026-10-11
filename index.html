@@ -1,40 +1,1576 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>경쟁사 판매량 추정 통합 대시보드 v4.7</title><style>
-:root{font-family:'Malgun Gothic',system-ui,sans-serif;color:#172a43;background:#f3f6fa}*{box-sizing:border-box}body{margin:0}header{background:#122741;color:white;padding:22px 3%}h1{font-size:24px;margin:0 0 6px}header small{color:#bdcce0}.shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;max-width:1720px;margin:18px auto;padding:0 14px}.panel{background:white;border:1px solid #dae3ee;border-radius:12px;padding:16px;margin-bottom:14px}.nav button{width:100%;display:block;text-align:left;background:transparent;color:#30455e;margin-bottom:4px}.nav button.active{background:#183d70;color:white}.nav button:hover{background:#e7edf6}.nav button.active:hover{background:#183d70}h2{font-size:17px;margin:0 0 14px}h3{font-size:14px;margin:0 0 9px}input,select,button{font:inherit;padding:9px;border-radius:7px;border:1px solid #c9d5e3;min-width:0}button{cursor:pointer;background:#1d4d87;color:white;border:0}button.alt{background:#eaf0f8;color:#243d5a}.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.fields label,.sidefield{font-size:12px;color:#51647c;display:flex;flex-direction:column;gap:6px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.muted{font-size:12px;color:#65768b;line-height:1.6}.warn{color:#a55212}.good{color:#087049}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.card{background:white;border:1px solid #dae3ee;border-radius:10px;padding:14px}.card b{font-size:24px;display:block;margin-top:5px}.view{display:none}.view.active{display:block}.tablewrap{overflow:auto;max-height:65vh}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:10px;border-bottom:1px solid #e8eef5;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#edf2f8}td.wrap{white-space:normal;min-width:210px}tr:hover td{background:#f7faff}.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calendar button{background:#edf2f8;color:#233d5b;padding:9px 2px}.calendar button.selected{background:#1d4d87;color:white}.calendar button.has{border:2px solid #3a9d91}.calendar .day{font-size:11px;text-align:center;color:#617189}.sidefield input{width:100%}.pills{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.pills button{font-size:12px;padding:7px 10px}.notice{background:#f0f5fc;padding:10px;border-left:3px solid #4076bb;border-radius:5px;font-size:12px;line-height:1.6}.stack{display:grid;gap:10px}#status{overflow-wrap:anywhere}.summary{margin-bottom:12px}.mini{font-size:11px;color:#62748a}.right{text-align:right}@media(max-width:900px){.shell{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
-</style></head><body><header><h1>경쟁사 판매량 추정 대시보드 <small>v4.7</small></h1><small>커머스05 전용 · 주간 07:00–17:00 / 야간 17:00–다음 날 07:00 · 재고 감소 기반 추정, 실제 주문 확정 아님</small></header><div class="shell"><aside><div class="panel nav" id="nav"><button class="active" data-view="overview">전체 현황</button><button data-view="competitors">업체별 조회</button><button data-view="categories">자재별 조회</button><button data-view="products">상품별 재고 현황</button><button data-view="calendar">달력·판매 추정</button><button data-view="large">평수별 대량 감소</button><button data-view="anomaly">이상 변동 분석</button><button data-view="manage">상품·면적 설정</button><button data-view="connection">연결·데이터 관리</button></div><div class="panel"><h3>조회 영업일</h3><label class="sidefield">07:00~다음 날 07:00<input type="date" id="date"></label><div class="actions"><button class="alt" id="yesterday">전날</button><button class="alt" id="today">오늘</button></div><h3>공통 필터</h3><label class="sidefield">경쟁사<select id="storeFilter"><option value="">전체 업체</option></select></label><br><label class="sidefield">자재 분류<select id="catFilter"><option value="">전체 자재</option></select></label><br><label class="sidefield">상품 검색<input id="search" placeholder="상품명·번호·옵션"></label><p class="muted">왼쪽 필터는 모든 조회 화면에 적용됩니다.</p></div><div class="panel"><h3>연결 상태</h3><div id="status" class="muted">연결 전</div><div class="actions"><button id="refresh">데이터 새로고침</button></div></div></aside><main>
-<section class="view active" id="overview"><div class="cards" id="cards"></div><div class="panel"><h2>업체별 추정 현황 (자사 포함)</h2><div class="tablewrap" id="overviewStores"></div></div><div class="panel"><h2>자재별 추정 현황</h2><div class="tablewrap" id="overviewCats"></div></div><div class="notice">재고 감소에는 주문 외 재고 조정·출고·타 채널 판매가 포함될 수 있습니다. 미관측·장기 공백·이상 변동은 일반 추정과 구분합니다.</div></section>
-<section class="view" id="competitors"><div class="panel"><h2>업체별 조회</h2><p class="muted">경쟁사명을 선택하면 해당 업체의 상품·재고·주간/야간 감소 추정을 조회합니다.</p><div class="tablewrap" id="storeTable"></div></div></section>
-<section class="view" id="categories"><div class="panel"><h2>자재별 조회</h2><div class="pills" id="catPills"></div><div class="tablewrap" id="catTable"></div></div></section>
-<section class="view" id="products"><div class="panel"><h2>상품별 재고 현황</h2><p class="muted">옵션별 관측 재고와 마지막 수집 시각, 주간·야간 감소를 표시합니다. 수집 기록이 없으면 '수집 대기'입니다.</p><div class="tablewrap" id="productTable"></div></div></section>
-<section class="view" id="calendar"><div class="panel"><h2>날짜별 판매 추정</h2><div class="actions"><button class="alt" id="prevMonth">◀ 이전 달</button><b id="monthLabel"></b><button class="alt" id="nextMonth">다음 달 ▶</button></div><div class="calendar" id="cal"></div><p class="muted">날짜를 누르면 그날 07:00~다음 날 07:00 기록을 표시합니다. 파란 테두리는 관측 기록이 있는 날입니다.</p></div><div class="panel"><h2>선택일 관측 구간</h2><div class="tablewrap" id="calendarTable"></div></div></section>
-<section class="view" id="large"><div class="panel"><h2>평수별 대량 감소 검색</h2><div class="fields"><label class="sidefield">최소 평수<input id="minPy" type="number" min="0" step="0.1" value="5"></label><label class="sidefield">최대 평수(빈칸=무제한)<input id="maxPy" type="number" min="0" step="0.1" placeholder="무제한"></label></div><div class="pills" id="ranges"><button class="alt" data-range="5,">5평 이상</button><button class="alt" data-range="20,50">20~50평</button><button class="alt" data-range="100,">100평 이상</button><button class="alt" data-range="500,1000">500~1,000평</button><button class="alt" data-range="0,">전체</button></div><div class="actions"><button id="csv">검색 결과 CSV 저장</button></div><div class="tablewrap" id="largeTable"></div></div></section>
-<section class="view" id="anomaly"><div class="panel"><h2>이상 변동 분석</h2><div class="fields"><label class="sidefield">급감 기준(재고 단위)<input id="dropLimit" type="number" min="1" value="1000"></label><label class="sidefield">급증 기준(재고 단위)<input id="riseLimit" type="number" min="1" value="1000"></label><label class="sidefield">장기 공백 기준(시간)<input id="gapLimit" type="number" min="1" value="16"></label></div><p class="notice">급격한 재고 변화, 증가, 장기 관측 공백을 검토 대상으로 분리합니다. 이상 변동만으로 재고 조작·가매출을 판단할 수 없습니다.</p><div class="tablewrap" id="anomalyTable"></div></div></section>
-<section class="view" id="manage"><div class="panel"><h2>새로고침 · 오늘까세 자사 상품 복원</h2><p class="muted">기존 원본에서 확인한 새로고침 8개와 오늘까세 3개를 현재 GitHub 상품 목록에 중복 없이 추가합니다. 기존 99개 상품은 삭제하지 않습니다. 기존 과거 재고 기록은 복원하지 않습니다.</p><div class="actions"><button id="restoreOwn">자사 상품 11개 복원</button></div><p class="muted" id="restoreStatus">아직 복원하지 않았습니다.</p></div><div class="panel"><h2>수집 대상 URL 등록 · 수정 · 중지 · 삭제</h2><p class="muted">상품 URL을 추가하면 GitHub config/products.json에 저장합니다. 저장은 GitHub Pages에 배포한 화면에서만 가능합니다. 이 PC에서 파일을 직접 연 미리보기에서는 등록을 시도하지 않습니다.</p><div class="fields"><label class="sidefield">상품 URL<input id="newUrl" placeholder="https://smartstore.naver.com/상점/products/1234567890"></label><label class="sidefield">경쟁사 이름<input id="newStore" placeholder="예: 도든"></label><label class="sidefield">상품 표시명<input id="newName" placeholder="비워두면 자동 생성"></label><label class="sidefield">자재 품목<select id="newCat"><option>데코타일</option><option>장판</option><option>강마루</option><option>강화마루</option><option>필름</option><option>기타</option></select></label></div><div class="actions"><button id="addProduct">새 상품 등록</button><button class="alt" id="cancelProduct">입력 초기화</button></div><p class="muted" id="manageStatus">GitHub 저장 준비 중</p><div class="tablewrap" id="manageProducts"></div><p class="muted">중지한 상품은 목록에 남기되 수집 대상에서 제외합니다. 삭제는 수집 목록에서만 제거하며 과거 재고 기록은 삭제하지 않습니다.</p></div><div class="panel"><h2>상품·옵션별 면적 및 자재 분류</h2><div class="fields"><label class="sidefield">상품·옵션<select id="editProduct"></select></label><label class="sidefield">경쟁사 표시명<input id="editStore" placeholder="원본 이름을 유지하려면 빈칸"></label><label class="sidefield">자재 분류<select id="editCat"></select></label><label class="sidefield">규격<select id="editSize"><option value="600">600×600 (9장/평)</option><option value="457">457×457 (16장/평)</option><option value="450">450×450 (16장/평)</option><option value="300">300×300 (36장/평)</option><option value="custom">직접 설정</option></select></label><label class="sidefield">1평 기준 장수<input id="editSheets" type="number" min="0.001" step="0.001"></label><label class="sidefield">재고 수량 단위<select id="editUnit"><option value="box">박스</option><option value="piece">낱장</option><option value="half">반평</option><option value="pyeong">1평</option><option value="custom">직접 입력</option></select></label><label class="sidefield">1박스당 장수<input id="editBox" type="number" min="0.001" step="0.001"></label><label class="sidefield">직접 입력: 재고 1개당 평<input id="editFactor" type="number" min="0.0001" step="0.0001"></label></div><div class="actions"><button id="saveMeta">상품 설정 저장</button><button class="alt" id="exportMeta">설정 백업(JSON)</button><label class="sidefield">설정 복원<input type="file" id="importMeta" accept=".json,application/json"></label></div><p class="muted">기본 환산: 600각 9장, 450·457각 16장, 300각 36장 = 1평. 상품·옵션별로 박스/낱장/반평을 따로 지정합니다. 설정은 현재 브라우저에 저장되므로 백업을 권장합니다. 미설정 옵션의 평수는 임의로 계산하지 않습니다.</p></div></section>
-<section class="view" id="connection"><div class="panel"><h2>GitHub 데이터 연결</h2><div class="fields"><label class="sidefield">GitHub 사용자<input id="owner" value="ds4eqm-lgtm"></label><label class="sidefield">저장소<input id="repo" value="competitor-sales-dashboard"></label></div><div class="actions"><button id="reload">연결 다시 확인</button></div><p class="muted">기존 상품목록(config/products.json)과 새 수집기 기록(data/history.json, data/latest.json)을 함께 읽습니다. 파일이 아직 없는 경우에는 해당 항목을 수집 대기로 표시합니다. 기존 v2 데이터(records.json)도 보조로 읽습니다.</p><h3>연결 파일 상태</h3><div id="filesStatus" class="muted">아직 확인하지 않았습니다.</div></div><div class="panel"><h2>오프라인 데이터 가져오기</h2><label class="sidefield">수집 기록 JSON (history.json 또는 latest.json)<input type="file" id="importData" accept=".json,application/json" multiple></label><p class="muted">GitHub 접속에 문제가 있을 때 데이터를 임시로 열람할 수 있습니다. GitHub 업로드 기능은 포함하지 않습니다.</p></div></section>
-</main></div><script>
-'use strict';const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fmt=x=>Number(x||0).toLocaleString('ko-KR',{maximumFractionDigits:2}),CATS=['데코타일','장판','강마루','강화마루','필름','기타'];const K='commerce05-dashboard-v45-meta';let meta={};try{meta=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}let history={},latest={},products=[],records=[],events=[],items=[],visible=[],largeShown=[],selectedView='overview',month='';const pad=n=>String(n).padStart(2,'0');function localDay(){let d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}let day=localDay();$('date').value=day;month=day.slice(0,7);const defaults={600:9,457:16,450:16,300:36};
-function time(s){if(!s)return NaN;let v=String(s).replace(' ','T');if(/[zZ]$|[+-]\d\d:\d\d$/.test(v))return Date.parse(v);return Date.parse(v+'+09:00')}function kst(ms){return new Date(ms+32400000)}function business(ms){let d=kst(ms);if(d.getUTCHours()<7)d=new Date(d.getTime()-86400000);return d.toISOString().slice(0,10)}function period(ms){return kst(ms).getUTCHours()>=7&&kst(ms).getUTCHours()<17?'주간':'야간'}function periodForInterval(a,b){return period(b-1)}function parseProduct(x){if(typeof x==='string')return {url:x};return x&&typeof x==='object'?x:{}}function urlId(s){let m=String(s||'').match(/\/products\/(\d+)/);return m?m[1]:''}function urlStore(s){let m=String(s||'').match(/https?:\/\/(?:smartstore|brand)\.naver\.com\/([^/]+)/);return m?m[1]:''}function normalizedProducts(raw){let arr=Array.isArray(raw)?raw:Array.isArray(raw?.products)?raw.products:Array.isArray(raw?.items)?raw.items:[];return arr.map((x,i)=>{x=parseProduct(x);let url=x.url||x.productUrl||x.link||'',id=String(x.productNo||x.productId||x.id||urlId(url)||''),store=String(x.storeName||x.store||x.mallName||x.seller||urlStore(url)||'미분류 경쟁사'),name=String(x.name||x.title||x.productName||id||`상품 ${i+1}`),cat=String(x.category||x.type||'기타');return {id,store,name,cat:CATS.includes(cat)?cat:'기타',url,enabled:x.enabled!==false,ownership:x.ownership||(['새로고침','오늘까세'].includes(store)?'자사':'경쟁사'),raw:x}})}function optionKeyProduct(key){let a=String(key).split('_');return a.length>=3?a[a.length-2]:''}function itemFrom(key,info){let id=String(info.product||info.productNo||optionKeyProduct(key)||''),match=products.find(x=>x.id===id),m=meta[key]||meta['product:'+id]||{},store=m.store||info.store||match?.store||'미분류 경쟁사',name=info.productName||match?.name||id||key;return {key,id,store,name,option:info.optionName||'',cat:m.category||match?.cat||'기타',stock:info.stock,last:info.date||'',configured:!!meta[key],raw:info}}
-function collect(){items=[];const keys=new Set([...Object.keys(history),...Object.keys(latest)]);for(let key of keys)items.push(itemFrom(key,latest[key]||{}));for(let p of products.filter(x=>x.enabled)){if(!items.some(x=>x.id===p.id))items.push({key:'product:'+p.id,id:p.id,store:meta['product:'+p.id]?.store||p.store,name:p.name,option:'',cat:meta['product:'+p.id]?.category||p.cat,stock:null,last:'',configured:false,raw:{}})}events=[];for(let [key,rec] of Object.entries(history)){if(!rec||typeof rec!=='object')continue;let pts=Object.entries(rec).map(([at,v])=>({at,ms:time(at),v:Number(v)})).filter(x=>Number.isFinite(x.ms)&&Number.isFinite(x.v)).sort((a,b)=>a.ms-b.ms);for(let i=1;i<pts.length;i++){let a=pts[i-1],b=pts[i],delta=a.v-b.v;if(delta===0)continue;events.push({key,start:a.at,end:b.at,ms:a.ms,endMs:b.ms,day:business(a.ms),period:periodForInterval(a.ms,b.ms),delta,gap:(b.ms-a.ms)/3600000,prev:a.v,now:b.v})}}events.sort((a,b)=>b.ms-a.ms);fillFilters();render()}
-function getItem(key){return items.find(x=>x.key===key)||{key,store:'미분류 경쟁사',name:key,option:'',cat:'기타'}}function factor(key){let m=meta[key];if(!m)return null;let sheets=Number(m.sheets),box=Number(m.boxSheets),f=m.unit==='box'?box/sheets:m.unit==='piece'?1/sheets:m.unit==='half'?.5:m.unit==='pyeong'?1:m.unit==='custom'?Number(m.customPy):NaN;return Number.isFinite(f)&&f>0?f:null}function activeItems(){let s=$('storeFilter').value,c=$('catFilter').value,q=$('search').value.trim().toLowerCase();return items.filter(x=>(!s||x.store===s)&&(!c||x.cat===c)&&(!q||`${x.store} ${x.name} ${x.option} ${x.id}`.toLowerCase().includes(q)))}function activeEvents(){let keys=new Set(activeItems().map(x=>x.key));return events.filter(e=>keys.has(e.key)&&e.day===day)}function isAnomaly(e){return e.delta>=Number($('dropLimit').value)||-e.delta>=Number($('riseLimit').value)||e.gap>Number($('gapLimit').value)}function normal(e){return e.delta>0&&!isAnomaly(e)}function sumFor(key){let e=activeEvents().filter(x=>x.key===key),d=e.filter(normal);return {day:d.filter(x=>x.period==='주간').reduce((s,x)=>s+x.delta,0),night:d.filter(x=>x.period==='야간').reduce((s,x)=>s+x.delta,0),anomaly:e.filter(isAnomaly).length}}function fillFilters(){let prevS=$('storeFilter').value,prevC=$('catFilter').value;let stores=[...new Set(items.map(x=>x.store))].sort();$('storeFilter').innerHTML='<option value="">전체 업체</option>'+stores.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');$('catFilter').innerHTML='<option value="">전체 자재</option>'+CATS.map(s=>`<option>${esc(s)}</option>`).join('');if(stores.includes(prevS))$('storeFilter').value=prevS;if(CATS.includes(prevC))$('catFilter').value=prevC;let p=$('editProduct').value;$('editProduct').innerHTML=items.map(x=>`<option value="${esc(x.key)}">${esc(x.store)} / ${esc(x.name)} / ${esc(x.option||'기본')}</option>`).join('');if(items.some(x=>x.key===p))$('editProduct').value=p;fillEdit()}
-function table(headers,rows,empty='표시할 데이터가 없습니다.'){return `<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(r=>`<tr>${r.map((v,i)=>`<td class="${i===1?'wrap':''}">${v}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}">${esc(empty)}</td></tr>`}</tbody></table>`}function summaryGroups(field){let map=new Map;for(let x of activeItems()){let k=x[field]||'미분류';if(!map.has(k))map.set(k,{name:k,items:0,observed:0,day:0,night:0,anomaly:0});let z=map.get(k),v=sumFor(x.key);z.items++;if(x.stock!=null)z.observed++;z.day+=v.day;z.night+=v.night;z.anomaly+=v.anomaly}return [...map.values()].sort((a,b)=>b.day+b.night-a.day-a.night)}function groupTable(a){return table(['이름','등록 상품·옵션','관측됨','주간 감소 추정(재고 단위)','야간 감소 추정(재고 단위)','검토 구간'],a.map(x=>[esc(x.name),fmt(x.items),fmt(x.observed),fmt(x.day),fmt(x.night),fmt(x.anomaly)]))}function render(){visible=activeItems();let ee=activeEvents(),normalEvents=ee.filter(normal),d=normalEvents.filter(e=>e.period==='주간').reduce((s,e)=>s+e.delta,0),n=normalEvents.filter(e=>e.period==='야간').reduce((s,e)=>s+e.delta,0);$('cards').innerHTML=[['등록 상품·옵션',visible.length],['재고 관측',visible.filter(x=>x.stock!=null).length],['주간 감소 추정',fmt(d)],['야간 감소 추정',fmt(n)]].map(([k,v])=>`<div class="card"><span class="muted">${k}</span><b>${v}</b></div>`).join('');let st=summaryGroups('store'),cat=summaryGroups('cat');$('overviewStores').innerHTML=groupTable(st);$('overviewCats').innerHTML=groupTable(cat);$('storeTable').innerHTML=groupTable(st);$('catPills').innerHTML=['전체',...CATS].map(c=>`<button class="alt" data-cat="${c==='전체'?'':c}">${c}</button>`).join('');$('catTable').innerHTML=groupTable(cat);$('productTable').innerHTML=table(['경쟁사','상품 / 옵션','자재','최신 재고','최종 관측','주간 감소','야간 감소','상태'],visible.map(x=>{let v=sumFor(x.key);return [esc(x.store),esc(x.name)+(x.option?`<div class="mini">${esc(x.option)}</div>`:''),esc(x.cat),x.stock==null?'수집 대기':fmt(x.stock),esc(x.last||'—'),fmt(v.day),fmt(v.night),x.stock==null?'<span class="warn">미수집</span>':'<span class="good">관측됨</span>']}));renderCal();let eRows=ee.map(e=>{let x=getItem(e.key),f=factor(e.key);return [esc(e.start),esc(e.end),esc(x.store),esc(x.name+' / '+x.option),esc(e.period),fmt(e.delta),f===null?'미설정':fmt(Math.max(0,e.delta)*f),isAnomaly(e)?'<span class="warn">검토 필요</span>':'일반 관측']});$('calendarTable').innerHTML=table(['관측 시작','관측 종료','경쟁사','상품/옵션','시간대','재고 감소(+)/증가(-)','감소 평수','상태'],eRows);renderLarge();renderAnomalies()}
-function renderLarge(){let min=Number($('minPy').value||0),max=$('maxPy').value===''?Infinity:Number($('maxPy').value);largeShown=activeEvents().filter(e=>e.delta>0).map(e=>({...e,item:getItem(e.key),factor:factor(e.key)})).filter(e=>e.factor!=null&&e.delta*e.factor>=min&&e.delta*e.factor<=max);$('largeTable').innerHTML=table(['경쟁사','상품/옵션','자재','관측 시작','관측 종료','감소 수량','추정 평수','상태'],largeShown.map(e=>[esc(e.item.store),esc(e.item.name+' / '+e.item.option),esc(e.item.cat),esc(e.start),esc(e.end),fmt(e.delta),fmt(e.delta*e.factor),isAnomaly(e)?'<span class="warn">검토 필요</span>':'일반 관측']),'해당 조건의 기록이 없습니다. 상품별 판매 단위 설정과 수집 상태를 확인하세요.')}
-function renderAnomalies(){$('anomalyTable').innerHTML=table(['경쟁사','상품/옵션','관측 구간','이전→현재 재고','변화량','공백 시간','검토 사유'],activeEvents().filter(isAnomaly).map(e=>{let x=getItem(e.key),why=[];if(e.delta>=Number($('dropLimit').value))why.push('급감');if(-e.delta>=Number($('riseLimit').value))why.push('급증/입고');if(e.gap>Number($('gapLimit').value))why.push('장기 공백');return [esc(x.store),esc(x.name+' / '+x.option),esc(e.start+' ~ '+e.end),`${fmt(e.prev)} → ${fmt(e.now)}`,fmt(e.delta),fmt(e.gap),`<span class="warn">${esc(why.join(', '))}</span>`]}))}
-function renderCal(){let [y,m]=month.split('-').map(Number),first=new Date(Date.UTC(y,m-1,1)).getUTCDay(),len=new Date(Date.UTC(y,m,0)).getUTCDate(),available=new Set(events.map(e=>e.day));$('monthLabel').textContent=`${y}년 ${m}월`;let s=['일','월','화','수','목','금','토'].map(v=>`<div class="day">${v}</div>`).join('');for(let i=0;i<first;i++)s+='<span></span>';for(let i=1;i<=len;i++){let v=`${y}-${pad(m)}-${pad(i)}`;s+=`<button data-day="${v}" class="${v===day?'selected':''} ${available.has(v)?'has':''}">${i}</button>`}$('cal').innerHTML=s}
-function fillEdit(){let k=$('editProduct').value,m=meta[k]||{},x=getItem(k),size=m.size||'600';$('editStore').value=m.store||'';$('editCat').value=m.category||x.cat||'기타';$('editSize').value=size;$('editSheets').value=m.sheets||defaults[size]||9;$('editBox').value=m.boxSheets||defaults[size]||9;$('editUnit').value=m.unit||'box';$('editFactor').value=m.customPy||''}function saveMeta(){let k=$('editProduct').value;if(!k)return;let m={store:$('editStore').value.trim(),category:$('editCat').value,size:$('editSize').value,sheets:Number($('editSheets').value),boxSheets:Number($('editBox').value),unit:$('editUnit').value,customPy:Number($('editFactor').value)};if(!Number.isFinite(m.sheets)||m.sheets<=0||!Number.isFinite(m.boxSheets)||m.boxSheets<=0){alert('장수를 확인하세요.');return}meta[k]=m;localStorage.setItem(K,JSON.stringify(meta));collect();$('status').textContent='상품 설정을 저장했습니다. 데이터는 변경하지 않았습니다.'}
-async function fetchMaybe(path){let owner=$('owner').value.trim(),repo=$('repo').value.trim();let u=`https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/main/${path}?v=${Date.now()}`;try{let r=await fetch(u,{cache:'no-store'});if(!r.ok)return {path,ok:false,error:'HTTP '+r.status};return {path,ok:true,data:await r.json()}}catch(e){return {path,ok:false,error:String(e.message||e)}}}async function load(){let owner=$('owner').value.trim(),repo=$('repo').value.trim();if(!/^[\w.-]+$/.test(owner)||!/^[\w.-]+$/.test(repo)){alert('GitHub 사용자와 저장소 이름을 확인하세요.');return}$('status').textContent='GitHub 데이터 확인 중…';let paths=['config/products.json','data/history.json','data/latest.json','data/records.json'];let res=await Promise.all(paths.map(fetchMaybe));let by=Object.fromEntries(res.filter(x=>x.ok).map(x=>[x.path,x.data]));products=normalizedProducts(by['config/products.json']||[]);history=by['data/history.json']||{};latest=by['data/latest.json']||{};records=by['data/records.json']||[];$('filesStatus').innerHTML=res.map(x=>`<div>${esc(x.path)}: <span class="${x.ok?'good':'warn'}">${x.ok?'연결됨':esc(x.error)}</span></div>`).join('');collect();renderManageProducts();let ok=res.filter(x=>x.ok).length;$('manageStatus').textContent=canSync()?'GitHub Pages 연결 준비됨 · 저장하려면 Tampermonkey 토큰이 설정되어 있어야 합니다.':'로컬 미리보기: 등록·수정은 GitHub Pages 배포 후 가능합니다.';$('status').textContent=`${ok}/4개 파일 연결 · 등록 상품 ${products.length}개 · 재고 옵션 ${Object.keys(latest).length}개 · 관측 구간 ${events.length}건${!by['data/history.json']?' · 새 수집 기록 대기':''}`}
-function download(name,s,type){let u=URL.createObjectURL(new Blob([s],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}
-$('nav').onclick=e=>{let b=e.target.closest('[data-view]');if(!b)return;selectedView=b.dataset.view;document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===selectedView));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x===b))};$('refresh').onclick=load;$('reload').onclick=load;for(let id of ['storeFilter','catFilter','search','minPy','maxPy','dropLimit','riseLimit','gapLimit'])$(id).addEventListener('input',render);$('date').onchange=()=>{day=$('date').value;month=day.slice(0,7);render()};$('today').onclick=()=>{day=localDay();$('date').value=day;month=day.slice(0,7);render()};$('yesterday').onclick=()=>{let d=new Date(day+'T12:00:00+09:00');d.setUTCDate(d.getUTCDate()-1);day=d.toISOString().slice(0,10);$('date').value=day;month=day.slice(0,7);render()};$('prevMonth').onclick=()=>{let [y,m]=month.split('-').map(Number);month=new Date(Date.UTC(y,m-2,1)).toISOString().slice(0,7);renderCal()};$('nextMonth').onclick=()=>{let [y,m]=month.split('-').map(Number);month=new Date(Date.UTC(y,m,1)).toISOString().slice(0,7);renderCal()};$('cal').onclick=e=>{let d=e.target.dataset.day;if(d){day=d;$('date').value=d;render()}};$('catPills').onclick=e=>{let b=e.target.closest('[data-cat]');if(b){$('catFilter').value=b.dataset.cat;render()}};$('ranges').onclick=e=>{let b=e.target.closest('[data-range]');if(b){let [a,z]=b.dataset.range.split(',');$('minPy').value=a;$('maxPy').value=z;renderLarge()}};$('editProduct').onchange=fillEdit;$('editSize').onchange=()=>{let n=defaults[$('editSize').value];if(n){$('editSheets').value=n;$('editBox').value=n}};$('saveMeta').onclick=saveMeta;$('exportMeta').onclick=()=>download('경쟁사_상품설정_백업.json',JSON.stringify(meta,null,2),'application/json');$('importMeta').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let x=JSON.parse(await f.text());if(!x||typeof x!=='object'||Array.isArray(x))throw Error('형식 오류');meta=x;localStorage.setItem(K,JSON.stringify(meta));collect();alert('설정 복원 완료')}catch(err){alert('설정 복원 실패: '+err.message)}};$('importData').onchange=async e=>{for(let f of e.target.files){try{let x=JSON.parse(await f.text());if(f.name.includes('history'))history=x;else if(f.name.includes('latest'))latest=x;else alert('파일명에 history 또는 latest가 포함되어야 합니다.')}catch(err){alert(f.name+' 읽기 실패: '+err.message)}}collect();$('status').textContent='선택한 로컬 데이터를 불러왔습니다. GitHub에는 변경사항이 없습니다.'};$('csv').onclick=()=>{let a=[['경쟁사','상품옵션','자재','관측시작','관측종료','감소수량','추정평수','검토여부'],...largeShown.map(e=>[e.item.store,e.item.name+' / '+e.item.option,e.item.cat,e.start,e.end,e.delta,(e.delta*e.factor).toFixed(3),isAnomaly(e)?'검토':'일반'])];download('경쟁사_대량감소_분석.csv','\ufeff'+a.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')};
-// v4.7 수집 대상 관리. 페이지에는 토큰을 전달하지 않고 Tampermonkey 내부에서만 GitHub API 호출.
-function canSync(){return location.protocol==='https:'&&location.hostname==='ds4eqm-lgtm.github.io'&&location.pathname.startsWith('/competitor-sales-dashboard/')}
-function validUrl(raw){try{let u=new URL(raw);return u.protocol==='https:'&&['smartstore.naver.com','brand.naver.com'].includes(u.hostname)&&/^\/[^/]+\/products\/\d+\/?$/.test(u.pathname)}catch(e){return false}}
-let editingId='';let mutationBusy=false;
-function renderManageProducts(){let rows=products.map(p=>`<tr><td>${esc(p.ownership==='자사'?'[자사] '+p.store:p.store)}</td><td>${esc(p.name)}</td><td>${esc(p.cat)}</td><td>${p.enabled?'수집 대상':'중지'}</td><td><button class="alt" data-action="edit" data-id="${esc(p.id)}">수정</button> <button class="alt" data-action="toggle" data-id="${esc(p.id)}">${p.enabled?'중지':'재개'}</button> <button class="alt" data-action="delete" data-id="${esc(p.id)}">삭제</button></td></tr>`).join('');$('manageProducts').innerHTML='<table><thead><tr><th>경쟁사</th><th>상품</th><th>품목</th><th>상태</th><th>관리</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5">등록된 상품 없음</td></tr>')+'</tbody></table>'}
-function clearForm(){editingId='';$('newUrl').value='';$('newStore').value='';$('newName').value='';$('newCat').value='데코타일';$('addProduct').textContent='새 상품 등록'}
-function mutateGitHub(change){if(!canSync()){alert('현재 파일 미리보기입니다. GitHub Pages에 새 대시보드를 배포한 뒤 저장할 수 있습니다.');return}if(mutationBusy)return;mutationBusy=true;$('addProduct').disabled=true;$('manageStatus').textContent='GitHub에 저장 중…';window.postMessage({from:'cs-dashboard',type:'productsMutation',change},location.origin);setTimeout(()=>{if(mutationBusy){mutationBusy=false;$('addProduct').disabled=false;$('manageStatus').textContent='응답이 없습니다. Tampermonkey v4.7 활성화와 토큰 설정을 확인하세요.'}},20000)}
-$('addProduct').onclick=()=>{let url=$('newUrl').value.trim(),store=$('newStore').value.trim(),name=$('newName').value.trim(),category=$('newCat').value;if(!validUrl(url)){alert('네이버 스마트스토어 또는 브랜드스토어의 상품 URL을 정확히 입력하세요.');return}if(!store){alert('경쟁사 이름을 입력하세요.');return}let id=urlId(url);if(products.some(p=>p.id===id&&p.id!==editingId)){alert('이미 등록된 상품 번호입니다. 기존 상품을 수정하세요.');return}mutateGitHub({action:editingId?'edit':'add',id:editingId||id,product:{id,url,store,name:name||store+' · '+id,category,enabled:true}})};
-$('cancelProduct').onclick=clearForm;
-$('manageProducts').onclick=e=>{let b=e.target.closest('[data-action]');if(!b)return;let p=products.find(x=>x.id===b.dataset.id);if(!p)return;if(b.dataset.action==='edit'){editingId=p.id;$('newUrl').value=p.url;$('newStore').value=p.store;$('newName').value=p.name;$('newCat').value=p.cat;$('addProduct').textContent='수정 내용 저장';$('newUrl').focus();return}if(b.dataset.action==='delete'&&!confirm('이 상품을 수집 목록에서 삭제할까요? 과거 기록은 유지됩니다.'))return;mutateGitHub({action:b.dataset.action,id:p.id})};
-window.addEventListener('message',e=>{let m=e.data;if(e.source!==window||e.origin!==location.origin||!m||m.from!=='cs-tracker'||m.type!=='productsMutationResult')return;mutationBusy=false;$('addProduct').disabled=false;if(!m.ok){$('manageStatus').textContent='저장 실패: '+String(m.error||'알 수 없는 오류');return}products=normalizedProducts(m.products||[]);clearForm();collect();renderManageProducts();$('manageStatus').textContent='GitHub 상품 목록 저장 완료 · '+products.length+'개';});
-$('restoreOwn').onclick=()=>{if(!canSync()){alert('GitHub Pages에 배포한 대시보드에서만 저장할 수 있습니다.');return}if(!confirm('기존 상품을 유지하면서 새로고침 8개·오늘까세 3개 중 누락된 상품만 추가할까요?'))return;$('restoreStatus').textContent='GitHub에 복원 요청 중…';window.postMessage({from:'cs-dashboard',type:'restoreOwnProducts'},location.origin)};
-window.addEventListener('message',async e=>{let m=e.data;if(e.source!==window||e.origin!==location.origin||!m||m.from!=='cs-tracker'||m.type!=='restoreOwnProductsResult')return;if(!m.ok){$('restoreStatus').textContent='복원 실패: '+String(m.error||'오류');return}$('restoreStatus').textContent=`복원 완료: 신규 ${m.added}개 / 이미 등록 ${m.existing}개 / 전체 ${m.total}개`;await load()});
-$('editCat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join('');render();load();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>커머스 인사이트</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  body { font-family: -apple-system, "Malgun Gothic", sans-serif; background:#f5f5f7; margin:0; padding:24px; color:#222; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .top { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .updated { color:#888; font-size:13px; }
+  .mode { display:inline-block; margin-top:6px; font-size:12px; padding:2px 10px; border-radius:999px; }
+  .mode.edit { background:#e6f6ec; color:#1c8e4d; }
+  .mode.view { background:#eee; color:#666; }
+  .mode a { color:inherit; font-weight:700; }
+  .btn { padding:9px 16px; border:1px solid #1f7a44; background:#22a55b; color:#fff; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+  .btn:hover { background:#1c8e4d; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn2 { background:#fff; color:#1c8e4d; }
+  .btn2:hover { background:#eef8f1; }
+  .sf-top { display:flex; flex-wrap:wrap; gap:16px; align-items:center; font-size:14px; }
+  .sf-top select { padding:5px 8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+  .sf-tier { font-weight:700; font-size:13px; color:#333; margin:12px 0 6px; padding-top:8px; border-top:1px solid #eee; }
+  .sf-sec { margin-bottom:10px; }
+  .sf-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:4px; }
+  .sf-copy { border:1px solid #22a55b; background:#22a55b; color:#fff; border-radius:6px; padding:3px 14px; font-size:13px; cursor:pointer; }
+  .sf-vals { display:flex; flex-wrap:wrap; gap:3px; font-size:11px; font-variant-numeric: tabular-nums; }
+  .sf-vals span { background:#f3f4f6; border-radius:4px; padding:2px 5px; color:#444; }
+  input[type="text"] { width:100%; max-width:360px; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+  .legend { margin-bottom:16px; }
+  .legend-all { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:8px; }
+  .cat-wrap { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  @media (max-width: 900px) { .cat-wrap { grid-template-columns: 1fr; } }
+  .cat-box { background:#fff; border:2px dashed #ddd; border-radius:10px; padding:10px 12px; min-height:60px; }
+  .cat-box.active { border-color:#222; border-style:solid; }
+  .cat-box.over { border-color:#22a55b; background:#f0faf3; }
+  .cat-title { font-weight:700; font-size:14px; margin-bottom:8px; cursor:pointer; }
+  .cat-title span { font-weight:400; color:#888; font-size:12px; }
+  .cat-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip[draggable="true"] { cursor:grab; }
+  .chip { padding:4px 12px; border-radius:999px; font-size:13px; font-weight:600; border-left:6px solid; cursor:pointer; opacity:0.55; transition:opacity .15s; }
+  .chip:hover { opacity:0.85; }
+  .chip.active { opacity:1; box-shadow:0 0 0 2px rgba(0,0,0,0.15) inset; }
+
+  .layout { display:grid; grid-template-columns: 520px 1fr; gap:16px; align-items:start; }
+  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+  .card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.08); padding:16px; }
+
+  .cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .cal-head b { font-size:16px; }
+  .cal-nav { border:1px solid #ddd; background:#fff; border-radius:6px; width:32px; height:28px; cursor:pointer; font-size:14px; }
+  .cal-grid { display:grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap:4px; }
+  .cal-day { overflow:hidden; }
+  .cal-day.off .ts { white-space:normal; }
+  .cal-dow { text-align:center; font-size:12px; color:#888; padding:4px 0; }
+  .cal-dow.sun { color:#e0442f; } .cal-dow.sat { color:#3b82f6; }
+  .cal-day { border:1px solid #eee; border-radius:6px; min-height:74px; padding:4px 4px; font-size:12px; cursor:pointer; position:relative; background:#fff; }
+  .cal-day .n { color:#666; }
+  .cal-day .ts { display:block; font-size:10px; color:#555; text-align:right; line-height:1.3; white-space:nowrap; }
+  .cal-day .v { display:block; margin-top:2px; font-weight:700; font-size:13px; text-align:right; }
+  .cal-day .live { display:block; font-size:10px; color:#e0442f; font-weight:700; line-height:1.2; }
+  .cal-day.empty { cursor:default; background:#fafafa; color:#ccc; }
+  .cal-day.off { cursor:default; background:#f3f3f3; border-style:dashed; }
+  .cal-day.off .n { color:#e0442f; }
+  .cal-day .offl { display:block; text-align:right; font-size:12px; color:#999; margin-top:4px; }
+  .cal-day.empty .n { color:#ccc; }
+  .cal-day.blank { border:none; background:transparent; cursor:default; }
+  .cal-day.sel { outline:2px solid #222; outline-offset:-1px; }
+  .cal-note { color:#999; font-size:12px; margin-top:10px; line-height:1.5; }
+
+  .day-title { font-size:17px; font-weight:700; margin:0 0 2px; }
+  .day-sub { color:#888; font-size:13px; margin-bottom:12px; }
+  .count { color:#888; font-size:13px; margin-bottom:8px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:9px 12px; text-align:left; font-size:14px; border-bottom:1px solid #eee; }
+  .th-sub { font-weight:400; font-size:11px; color:#999; }
+  th { background:#fafafa; color:#555; cursor:pointer; user-select:none; white-space:nowrap; }
+  td.num, th.num { text-align:right; white-space:nowrap; }
+  tbody tr.row { cursor:pointer; }
+  tbody tr.row:hover { filter:brightness(0.95); }
+  .sold { font-weight:700; }
+  .sold-high { color:#e0442f; }
+  .unk { font-weight:400; font-size:11px; color:#999; cursor:help; }
+  .sus { font-weight:700; font-size:11px; color:#d97706; }
+  .rise { font-weight:700; font-size:11px; color:#2563eb; }
+  .cal-day .up { position:absolute; top:3px; right:14px; font-size:10px; font-weight:800; color:#2563eb; }
+  .rise-box { border:1px solid #9cc0f5; background:#f0f6ff; border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:13px; }
+  .rise-box .ev { display:flex; flex-wrap:wrap; gap:10px; padding:3px 0; }
+  .recs .up { color:#2563eb; font-weight:700; }
+  .ok { font-weight:400; font-size:11px; color:#22a55b; }
+  .cal-day .warn { position:absolute; top:3px; right:5px; font-size:11px; font-weight:800; color:#d97706; }
+  .sus-box { border:1px solid #f5c26b; background:#fff8ec; border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:13px; }
+  .sus-box .ev { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:4px 0; border-bottom:1px dashed #f1d9a8; }
+  .sus-box .ev:last-child { border-bottom:none; }
+  .sus-box .why { color:#8a5a00; font-size:12px; }
+  .sus-box button { border:1px solid #d97706; background:#fff; color:#b45309; border-radius:6px; padding:2px 10px; font-size:12px; cursor:pointer; }
+  .sus-box button.on { background:#22a55b; border-color:#22a55b; color:#fff; }
+  .recs .s { color:#d97706; font-weight:700; }
+  .small { font-size:12px; color:#666; white-space:nowrap; }
+
+  tr.detail td { background:#fcfcfd; padding:12px 16px 16px; }
+  .detail-head { display:flex; gap:12px; align-items:center; margin-bottom:8px; font-size:13px; color:#555; }
+  .detail-head button { border:1px solid #ccc; background:#fff; border-radius:6px; padding:3px 10px; font-size:12px; cursor:pointer; }
+  .recs { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:4px 16px; font-size:13px; font-variant-numeric: tabular-nums; }
+  .recs .r { display:flex; justify-content:space-between; gap:8px; padding:2px 0; border-bottom:1px dotted #eee; }
+  .recs .d { color:#e0442f; font-weight:700; }
+  .recs .p { color:#3b82f6; }
+  .recs .base { color:#aaa; }
+  .recs .dayhdr { grid-column: 1 / -1; font-weight:700; margin-top:8px; color:#333; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <h1>커머스 인사이트</h1>
+      <div class="updated" id="updated">데이터 불러오는 중...</div>
+      <div id="mode" class="mode view"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn2" id="sheetBtn" disabled>기존 엑셀 붙여넣기용</button>
+      <button class="btn" id="excelBtn" disabled>엑셀 다운로드</button>
+    </div>
+  </div>
+
+  <input type="text" id="search" placeholder="스토어, 옵션 검색">
+  <div class="legend" id="legend"></div>
+
+  <div class="card" id="sheetPanel" hidden style="margin-bottom:16px">
+    <div class="sf-top">
+      <b>기존 엑셀(네이버 판매량 예측) 붙여넣기</b>
+      <label>날짜 <select id="sfDay"></select></label>
+      <label>시간 <select id="sfHour">
+        <option value="9">09시 기록 (출근 칸)</option>
+        <option value="17">17시 기록 (9시~17시 칸)</option>
+        <option value="16">16시 기록</option>
+        <option value="18">18시 기록</option>
+      </select></label>
+    </div>
+    <div class="small" style="white-space:normal;margin:6px 0 10px">엑셀에서 그 날짜 칸의 '오늘재고' 줄, 안내된 열(예: G열)을 한 번 클릭하고 Ctrl+V 하면 옆으로 쭉 채워져요. 구역마다 복사 버튼을 따로 눌러야 해요 (중간의 TOTAL, 도든샘플 칸을 건드리지 않으려고).</div>
+    <div id="sfBody"></div>
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      <div class="cal-head">
+        <button class="cal-nav" id="prevM">&lt;</button>
+        <b id="calTitle"></b>
+        <button class="cal-nav" id="nextM">&gt;</button>
+      </div>
+      <div class="cal-grid" id="cal"></div>
+      <div class="cal-note">
+        날짜 칸 숫자는 그날 판매량 합계예요 (위에서 고른 스토어 기준).<br>
+        근무일 기준이에요. 1타임은 직전 근무일 17시부터 그날 07시까지(출근 전), 2타임은 07~17시예요. 큰 숫자가 둘을 합친 전체예요.<br>
+        토·일·공휴일 판매량은 다음 근무일 1타임에 합쳐져요. 17시가 지나면 다음 근무일이 진행중이 돼요.<br>
+        빨간 '진행중'은 아직 마감 전이라 계속 늘어나는 날이에요.<br>
+        파란 '▲'는 재고가 한 번에 1,000개 이상 늘어난 날이에요 (입고 또는 사람이 숫자를 늘림, 판매량에는 영향 없음).<br>
+        주황 '!'는 사람이 재고를 직접 고친 것으로 의심되는 감소가 있는 날이에요. 합계에서 빠져 있고, 표에서 줄을 눌러 판매로 인정하면 다시 들어가요.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="day-title" id="dayTitle"></div>
+      <div class="day-sub" id="daySub"></div>
+      <div class="count" id="count"></div>
+      <table>
+        <thead>
+          <tr>
+            <th data-key="store">스토어</th>
+            <th data-key="optionName">옵션</th>
+            <th data-key="s" class="num">전체 판매</th>
+            <th data-key="t1" class="num">1타임<br><span class="th-sub">전 근무일 17시~07시</span></th>
+            <th data-key="t2" class="num">2타임<br><span class="th-sub">07~17시</span></th>
+            <th data-key="k" class="num" id="stockHead">마감 재고</th>
+            <th data-key="last" class="num">최근확인</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+const DAY_START_HOUR = 7;  // 하루 시작 (07:00 ~ 다음날 07:00)
+const SPLIT_HOUR = 17;     // 2타임(07~17) / 1타임(17~다음날 07) 나누는 시각
+const LONG_GAP_HOURS = 16; // 기록 사이가 이보다 길게 비면 기간불명으로 따로 표시
+const REPO_API = 'https://api.github.com/repos/ds4eqm-lgtm/commerce-insight/contents/';
+
+let items = [];        // 추적중인 옵션 목록
+let allItems = [];     // latest.json 전체 (추적 끝난 상품 포함)
+let historyData = {};  // 시간별 재고 기록
+let dayData = {};      // { 'YYYY-MM-DD': { key: {s,u,k,from,to} } }
+let currentDay = '';   // 지금 진행중인 영업일
+let selectedDay = '';
+let calMonth = null;   // 달력에 보이는 달 (1일 날짜)
+let activeStore = null;
+let openKey = null;    // 기록 펼친 줄
+let showAllFor = null; // 전체 기록 펼친 줄
+let sortKey = 'site'; // 처음에는 사이트 옵션 순서
+let sortAsc = true;
+let flagsAll = {};     // 수동변경 의심 { 옵션키: { 시간키: {d, why} } }
+
+// 판매로 인정한 의심 건: 깃허브 data/approved.json 에 저장돼서 어느 컴퓨터에서 봐도 똑같음
+// 저장은 탬퍼몽키 스크립트가 깔린 컴퓨터(관리용)에서만 가능, 나머지는 보기 전용
+let approved = new Set();
+let canEdit = false;
+let saving = false;
+let sourceText = '';
+
+// ---------------- 저장 기능 (두 컴퓨터 모두 가능) ----------------
+// 방법 1: 탬퍼몽키가 깔린 컴퓨터는 탬퍼몽키가 대신 저장
+// 방법 2: 탬퍼몽키가 없는 컴퓨터는 '편집 켜기'로 깃허브 토큰을 한 번 넣어두면 대시보드가 직접 저장
+//         (토큰은 그 컴퓨터 크롬에만 저장되고 웹페이지 파일에는 안 들어감)
+let bridgeOk = false;
+let lastSource = '';
+let ghToken = '';
+try { ghToken = localStorage.getItem('ghToken') || ''; } catch (e) { /* 무시 */ }
+const editMode = () => (bridgeOk ? 'bridge' : ghToken ? 'token' : null);
+function refreshCanEdit() { canEdit = !!editMode(); setModeLabel(); }
+
+function sendToTracker(msg) {
+  window.postMessage(Object.assign({ from: 'cs-dashboard' }, msg), '*');
+}
+
+// 탬퍼몽키에 부탁하고 답을 기다림
+const bridgeWaiters = {};
+function askTracker(msg, replyType) {
+  return new Promise((resolve, reject) => {
+    (bridgeWaiters[replyType] = bridgeWaiters[replyType] || []).push({ resolve, reject });
+    sendToTracker(msg);
+    setTimeout(() => reject(new Error('응답 없음')), 120000);
+  });
+}
+
+// 토큰으로 깃허브 파일 직접 읽고 쓰기
+function ghHeaders() {
+  return { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github+json' };
+}
+function b64ToUtf8(b64) { return decodeURIComponent(escape(atob(b64.replace(/\n/g, '')))); }
+function utf8ToB64(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+async function ghUpdateJson(path, mutate, message) {
+  let last = '';
+  for (let i = 0; i < 10; i++) {
+    const g = await fetch(`${REPO_API}${path}?t=${Date.now()}`, { headers: ghHeaders(), cache: 'no-store' });
+    let content = {};
+    let sha;
+    if (g.status === 200) {
+      const j = await g.json();
+      sha = j.sha;
+      content = JSON.parse(b64ToUtf8(j.content || '') || '{}');
+    } else if (g.status === 401 || g.status === 403) {
+      throw new Error('토큰 권한 오류 (' + g.status + '). 편집 켜기를 다시 해주세요.');
+    } else if (g.status !== 404) {
+      last = 'GET ' + g.status;
+      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+      continue;
+    }
+    const updated = mutate(content);
+    const put = await fetch(REPO_API + path, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, ghHeaders()),
+      body: JSON.stringify({ message, content: utf8ToB64(JSON.stringify(updated, null, 2)), sha }),
+    });
+    if (put.ok) return updated;
+    if (put.status === 401 || put.status === 403) throw new Error('토큰 권한 오류 (' + put.status + ')');
+    last = 'PUT ' + put.status;
+    await new Promise((r) => setTimeout(r, 500 * (i + 1) + Math.random() * 800));
+  }
+  throw new Error('저장 재시도 초과 (' + last + ')');
+}
+
+// 판매 인정 저장 → 최신 전체 목록을 돌려줌
+async function saveApprovals(ids, on) {
+  if (editMode() === 'bridge') {
+    const m = await askTracker({ type: 'approve', ids, on }, 'approved');
+    if (!m.ok) throw new Error(m.error);
+    return m.approved || {};
+  }
+  return ghUpdateJson('data/approved.json', (obj) => {
+    ids.forEach((id) => { if (on) obj[id] = ymd(new Date()); else delete obj[id]; });
+    return obj;
+  }, `판매 인정 ${on ? '추가' : '취소'} ${ids.length}건`);
+}
+
+async function enableEditing() {
+  const t = prompt('이 컴퓨터에서도 편집하려면 깃허브 토큰을 붙여넣어 주세요.\n(탬퍼몽키 스크립트 17번째 줄에 있는 github_pat_ 로 시작하는 값)\n토큰은 이 컴퓨터 크롬에만 저장돼요.');
+  if (!t) return;
+  const token = t.trim().replace(/^["']|["']$/g, '');
+  try {
+    const r = await fetch('https://api.github.com/repos/ds4eqm-lgtm/commerce-insight', { headers: { Authorization: `token ${token}` } });
+    const j = await r.json();
+    if (!r.ok || !(j.permissions && j.permissions.push)) throw new Error(r.ok ? '쓰기 권한 없음' : '상태 ' + r.status);
+  } catch (e) {
+    alert('토큰 확인 실패: ' + e.message);
+    return;
+  }
+  ghToken = token;
+  try { localStorage.setItem('ghToken', token); } catch (e) { /* 무시 */ }
+  refreshCanEdit();
+  renderAll();
+}
+
+function disableEditing() {
+  if (!confirm('이 컴퓨터의 편집 기능을 끌까요? (저장된 토큰을 지워요)')) return;
+  ghToken = '';
+  try { localStorage.removeItem('ghToken'); } catch (e) { /* 무시 */ }
+  refreshCanEdit();
+  renderAll();
+}
+
+function setModeLabel() {
+  const el = document.getElementById('mode');
+  if (!el) return;
+  const mode = editMode();
+  let txt;
+  if (mode === 'bridge') txt = '관리용 컴퓨터 · 편집 가능';
+  else if (mode === 'token') txt = '이 컴퓨터 편집 가능 · <a href="#" id="editOff">편집 끄기</a>';
+  else txt = '보기 전용 · <a href="#" id="editOn">이 컴퓨터에서도 편집 켜기</a>';
+  el.innerHTML = txt + (saving ? ' · 저장중...' : '');
+  el.className = 'mode ' + (mode ? 'edit' : 'view');
+  const on = document.getElementById('editOn');
+  if (on) on.addEventListener('click', (e) => { e.preventDefault(); enableEditing(); });
+  const off = document.getElementById('editOff');
+  if (off) off.addEventListener('click', (e) => { e.preventDefault(); disableEditing(); });
+}
+
+window.addEventListener('message', (ev) => {
+  const m = ev.data;
+  if (!m || m.from !== 'cs-tracker') return;
+  if (m.type === 'pong' && !bridgeOk) {
+    bridgeOk = true;
+    // 관리용 컴퓨터는 탬퍼몽키의 토큰으로 읽기도 해서 항상 최신 데이터를 봄 (메모리에만 두고 저장 안 함)
+    if (!ghToken && m.token) {
+      ghToken = m.token;
+      if (lastSource !== 'github') loadData(true).catch(() => {});
+    }
+    refreshCanEdit();
+    // 예전 버전에서 이 브라우저에만 저장해 둔 인정 내역이 있으면 깃허브로 옮김
+    try {
+      const old = JSON.parse(localStorage.getItem('approvedSuspicious') || '[]').filter((id) => !approved.has(id));
+      localStorage.removeItem('approvedSuspicious');
+      if (old.length) saveApprovals(old, true).then((r) => { approved = new Set(Object.keys(r)); renderAll(); }).catch(() => {});
+    } catch (e) { /* 무시 */ }
+    if (items.length) renderAll();
+    return;
+  }
+  const waiters = bridgeWaiters[m.type];
+  if (waiters && waiters.length) waiters.shift().resolve(m);
+});
+const evId = (key, t) => `${key}|${t}`;
+
+// 화면에 보여줄 판매량 = 판매로 본 수량 + 인정한 의심 수량
+function soldOf(key, v) {
+  if (!v) return 0;
+  let n = v.s;
+  (v.ev || []).forEach(([t, d]) => { if (approved.has(evId(key, t))) n += d; });
+  return n;
+}
+// ---------------- 단위 환산 ----------------
+// 기본: 데코타일 쪽은 1개 = 1박스, 장판 쪽은 1개 = 10cm 라서 10개 = 1m
+// products.txt 링크 뒤에 적으면 그 링크만 따로: '9장' → 9개 = 1박스, '20cm' → 1개 = 20cm (5개 = 1m), '1m' → 1개 = 1m
+const CAT_UNITS = { 장판: { div: 10, label: 'm' } };
+const DEFAULT_UNIT = { div: 1, label: '박스' };
+let unitDiv = {};      // { 상품번호: {div, label} } 링크별 지정
+let productOfKey = {}; // { 옵션키: 상품번호 }
+let catOfKey = {};     // { 옵션키: 분류 }
+function unitOf(key) {
+  const pid = productOfKey[key];
+  return unitDiv[pid] || CAT_UNITS[catOfKey[key]] || DEFAULT_UNIT;
+}
+const unitK = (key) => unitOf(key).div;
+const unitLabel = (key) => unitOf(key).label;
+const toBox = (key, n) => n / unitK(key); // 표시 단위(박스 또는 m)로 바꾼 값
+const fmtNum = (n) => (Math.round(n * 10) / 10).toLocaleString();
+function fmtQty(key, raw) { return `${fmtNum(toBox(key, raw))}${unitLabel(key)}`; }
+function unitNote(key) {
+  const u = unitOf(key);
+  if (u.label === 'm') return u.div === 1 ? '1개=1m' : `1개=${Math.round(100 / u.div)}cm`;
+  return u.div > 1 ? `${u.div}장=1박스` : '';
+}
+const soldBox = (key, v) => toBox(key, soldOf(key, v));
+
+// 단위별 합계 { 박스: 12, m: 30.5 } → '12박스 · 30.5m'
+const UNIT_ORDER = ['박스', 'm'];
+function fmtSums(o) {
+  const ks = Object.keys(o).sort((a, b) => UNIT_ORDER.indexOf(a) - UNIT_ORDER.indexOf(b));
+  if (!ks.length) return '0';
+  return ks.map((k) => `${fmtNum(o[k])}${k}`).join(' · ');
+}
+function sumsWhere(day, fn, slot) {
+  const dd = dayData[day];
+  const o = {};
+  items.forEach((it) => {
+    if (!fn(it)) return;
+    const lb = unitLabel(it.key);
+    if (!(lb in o)) o[lb] = 0;
+    const v = dd && dd[it.key];
+    const p = v && (slot ? v[slot] : v);
+    if (p) o[lb] += soldBox(it.key, p);
+  });
+  return o;
+}
+
+function pendingOf(key, v) {
+  if (!v) return 0;
+  let n = 0;
+  (v.ev || []).forEach(([t, d]) => { if (!approved.has(evId(key, t))) n += d; });
+  return n;
+}
+
+// ---------------- 날짜 계산 ----------------
+const pad = (n) => String(n).padStart(2, '0');
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function toDate(key) {
+  const [d, t = '00:00'] = key.split('T');
+  const [y, m, day] = d.split('-').map(Number);
+  const [hh, mm] = t.split(':').map(Number);
+  return new Date(y, m - 1, day, hh || 0, mm || 0);
+}
+
+// 하루 = 그날 07:00 ~ 다음날 07:00
+// 2타임 = 07:00 ~ 17:00, 1타임 = 17:00 ~ 다음날 07:00
+// 판매(재고 감소)는 '감소가 시작된 기록 시각'이 속한 타임에 넣음
+// 예) 밤에 컴퓨터가 꺼져서 18:00 다음 기록이 아침 09:00이면, 그 사이 줄어든 양은 전날 1타임(야간)
+function bizDayOf(dt) {
+  const d = new Date(dt);
+  if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
+  return ymd(d);
+}
+
+function dayWindow(day) {
+  const start = toDate(day);
+  start.setHours(DAY_START_HOUR, 0, 0, 0);
+  const split = new Date(start);
+  split.setHours(SPLIT_HOUR, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, split, end };
+}
+
+// 하루 판매량 계산
+// s: 판매 / u: 기록이 너무 오래 비어 언제 팔렸는지 모르는 양 / x, ev: 수동변경 의심 / k: 그날 마지막 재고
+// t1, t2: 1타임, 2타임 각각의 s, u, x, ev
+function computeDay(rec, day, flags, now) {
+  flags = flags || {};
+  const { start, split, end } = dayWindow(day);
+  const es = Object.keys(rec).map((t) => ({ t, dt: toDate(t), v: rec[t] })).sort((a, b) => a.dt - b.dt);
+  const mk = () => ({ s: 0, u: 0, x: 0, ev: [], up: 0, upEv: [], uEv: [] });
+  const all = mk();
+  const t1 = mk();
+  const t2 = mk();
+  let k = null;
+  let any = false;
+  let base = false;
+  for (let i = 0; i < es.length; i++) {
+    const e = es[i];
+    if (e.dt < start) { base = true; continue; }
+    if (e.dt >= end || (now && e.dt > now)) break;
+    any = true;
+    k = e.v;
+    const nx = es[i + 1];
+    if (!nx || (now && nx.dt > now)) continue;
+    const d = e.v - nx.v;
+    const per = e.dt < split ? t2 : t1;
+    if (d < 0) {
+      // 재고가 늘면 판매 아님. 크게 늘었으면 따로 기록만 해 둠
+      if (-d >= DETECT.BIG_RISE) [per, all].forEach((p) => { p.up += -d; p.upEv.push([nx.t, -d, e.v, nx.v]); });
+      continue;
+    }
+    if (d === 0) continue;
+    const f = flags[nx.t];
+    const gapH = (nx.dt - e.dt) / 3600000;
+    [per, all].forEach((p) => {
+      if (f) { p.x += d; p.ev.push([nx.t, d, f.why.join(', ')]); }
+      else if (gapH > LONG_GAP_HOURS) { p.u += d; p.uEv.push([e.t, nx.t, d]); }
+      else p.s += d;
+    });
+  }
+  if (!any) return null;
+  return Object.assign(all, { k, base, t1, t2 });
+}
+
+function fmtDT(d) {
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ---------------- 수동 재고변경 감지 설정 (대시보드와 탬퍼몽키 스크립트 값을 똑같이 맞출 것) ----------------
+const DETECT = {
+  BIG_DROP: 1000, // 한 번(보통 1시간) 사이에 이 수량 이상 줄면 사람이 재고를 직접 고친 것으로 의심
+  BIG_RISE: 1000, // 한 번에 이 수량 이상 늘면 '재고 대량 증가'로 표시 (입고 또는 사람이 숫자를 늘린 것, 판매량에는 영향 없음)
+};
+
+// 전체 기록에서 수동변경 의심 감소를 찾음
+// 결과: { 옵션키: { 시간키: { d: 감소량, why: [이유...] } } }
+function detectSuspicious(history) {
+  const out = {};
+  Object.keys(history).forEach((key) => {
+    const rec = history[key] || {};
+    const ts = Object.keys(rec).sort();
+    for (let i = 1; i < ts.length; i++) {
+      const d = rec[ts[i - 1]] - rec[ts[i]];
+      if (d >= DETECT.BIG_DROP) {
+        (out[key] = out[key] || {})[ts[i]] = {
+          d,
+          why: [`${rec[ts[i - 1]].toLocaleString()}개에서 ${rec[ts[i]].toLocaleString()}개로 한 번에 ${d.toLocaleString()}개 줄어듦 (${DETECT.BIG_DROP.toLocaleString()}개 이상)`],
+        };
+      }
+    }
+  });
+  return out;
+}
+
+// 구간 판매량 계산
+// s: 판매로 본 수량 / u: 기록이 비어 언제 팔렸는지 모르는 감소량 / k: 구간 마지막 재고
+// x: 수동변경 의심 수량 / ev: 의심 목록 [[시간키, 수량, 이유]]
+function computeWindow(rec, start, end, flags) {
+  flags = flags || {};
+  const entries = Object.keys(rec)
+    .map((k) => ({ t: k, dt: toDate(k), v: rec[k] }))
+    .sort((a, b) => a.dt - b.dt);
+  const before = entries.filter((e) => e.dt <= start).pop();
+  const within = entries.filter((e) => e.dt > start && e.dt <= end);
+  if (!within.length) return null;
+
+  const baselineInside = before && before.dt.getTime() === start.getTime();
+  const chain = baselineInside ? [before, ...within] : within;
+
+  let s = 0;
+  let x = 0;
+  const ev = [];
+  const take = (e, diff) => {
+    const f = flags[e.t];
+    if (f) { x += diff; ev.push([e.t, diff, f.why.join(', ')]); return true; }
+    return false;
+  };
+  for (let i = 1; i < chain.length; i++) {
+    const diff = chain[i - 1].v - chain[i].v;
+    if (diff > 0 && !take(chain[i], diff)) s += diff;
+  }
+  let u = 0;
+  let from = null;
+  if (before && !baselineInside) {
+    const diff = before.v - within[0].v;
+    if (diff > 0 && !take(within[0], diff)) { u = diff; from = before.dt; }
+  }
+  return { s, u, k: within[within.length - 1].v, x, ev, base: !!before, from, to: within[0].dt };
+}
+
+// 모든 옵션의 날짜별 판매량 만들기
+// 시간별 기록이 남아있는 날은 기록으로 계산, 14일 지나 지워진 날은 latest.json 에 보관된 값 사용
+// ---------------- 근무일 기준 (토·일·공휴일은 다음 근무일 1타임으로) ----------------
+// 법정공휴일 (대체공휴일, 선거일 포함). 회사 사정으로 쉬는 날은 products.txt 의 [휴무일] 아래에,
+// 공휴일인데 근무한 날은 [근무일] 아래에 2026-10-05 처럼 날짜를 적으면 됨
+const KR_HOLIDAYS = [
+  '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-02', '2026-05-01', '2026-05-05', '2026-05-25',
+  '2026-06-03', '2026-07-17', '2026-08-17', '2026-09-24', '2026-09-25', '2026-10-05', '2026-10-09', '2026-12-25',
+  '2027-01-01', '2027-02-08', '2027-02-09', '2027-03-01', '2027-05-03', '2027-05-05', '2027-05-13', '2027-07-19',
+  '2027-08-16', '2027-09-14', '2027-09-15', '2027-09-16', '2027-10-04', '2027-10-11', '2027-12-27',
+];
+let extraOff = new Set();  // products.txt [휴무일]
+let extraWork = new Set(); // products.txt [근무일]
+function isWorkday(day) {
+  if (extraWork.has(day)) return true;
+  if (extraOff.has(day) || KR_HOLIDAYS.includes(day)) return false;
+  const w = toDate(day).getDay();
+  return w !== 0 && w !== 6;
+}
+const addDays = (day, n) => { const d = toDate(day); d.setDate(d.getDate() + n); return ymd(d); };
+function prevWorkday(day) { let d = addDays(day, -1); for (let i = 0; i < 40 && !isWorkday(d); i++) d = addDays(d, -1); return d; }
+function nextWorkday(day) { let d = addDays(day, 1); for (let i = 0; i < 40 && !isWorkday(d); i++) d = addDays(d, 1); return d; }
+// 근무일 W 의 범위: 1타임 = 직전 근무일 17시 ~ W 07시, 2타임 = W 07시 ~ 17시
+function workPeriod(day) {
+  const start = toDate(prevWorkday(day)); start.setHours(SPLIT_HOUR, 0, 0, 0);
+  const split = toDate(day); split.setHours(DAY_START_HOUR, 0, 0, 0);
+  const end = toDate(day); end.setHours(SPLIT_HOUR, 0, 0, 0);
+  return { start, split, end };
+}
+// 지금 시각이 들어가는 근무일 (17시 넘으면 다음 근무일로 넘어감)
+function workdayOf(dt) {
+  const d = new Date(dt);
+  let day = ymd(d);
+  if (isWorkday(day) && d.getHours() < SPLIT_HOUR) return day;
+  return nextWorkday(day);
+}
+
+// 기록이 오래 비었어도(컴퓨터 꺼짐 등) 그 공백이 한 근무일 범위 안에서 끝나면 그 근무일 판매로 봄
+function mergeParts(parts, end) {
+  const o = { s: 0, u: 0, x: 0, ev: [], up: 0, upEv: [] };
+  parts.forEach((p) => {
+    if (!p) return;
+    let moved = 0;
+    if (end) (p.uEv || []).forEach(([, bT, d]) => { if (toDate(bT) <= end) moved += d; });
+    o.s += (p.s || 0) + moved; o.u += (p.u || 0) - moved; o.x += p.x || 0; o.up += p.up || 0;
+    (p.ev || []).forEach((e) => o.ev.push(e));
+    (p.upEv || []).forEach((e) => o.upEv.push(e));
+  });
+  return o;
+}
+
+function stockAtOrBefore(rec, dt) {
+  let best = null;
+  Object.keys(rec).forEach((t) => { const d = toDate(t); if (d <= dt && (!best || d > best.d)) best = { d, v: rec[t] }; });
+  return best ? best.v : null;
+}
+
+// 날짜별 조각(07~17시, 17시~다음날 07시)을 계산한 다음 근무일 단위로 합침
+function buildDayData(now) {
+  dayData = {};
+  currentDay = workdayOf(now);
+  items.forEach((it) => {
+    const rec = historyData[it.key] || {};
+    const archive = it.daily || {};
+    // 1) 날짜별 조각
+    const seg = {};
+    const days = new Set(Object.keys(archive));
+    const keys = Object.keys(rec).sort();
+    const today = ymd(now);
+    if (keys.length) {
+      let d = addDays(bizDayOf(toDate(keys[0])), -1);
+      for (let g = 0; g < 400 && d <= today; g++) { days.add(d); d = addDays(d, 1); }
+    }
+    days.forEach((day) => {
+      const r = computeDay(rec, day, flagsAll[it.key], now);
+      if (r && (r.base || !archive[day] || !archive[day].t1)) seg[day] = r;
+      else if (archive[day] && archive[day].t1) seg[day] = Object.assign({ archived: true }, archive[day]);
+    });
+    const segDays = Object.keys(seg).sort();
+    if (!segDays.length) return;
+    // 2) 근무일로 합치기
+    let w = isWorkday(segDays[0]) ? segDays[0] : nextWorkday(segDays[0]);
+    for (let g = 0; g < 400 && w <= currentDay; g++, w = nextWorkday(w)) {
+      const pw = prevWorkday(w);
+      const nightParts = [];
+      const dayParts = [];
+      for (let c = pw; c < w; c = addDays(c, 1)) {
+        if (!seg[c]) continue;
+        nightParts.push(seg[c].t1); // c 17시 ~ 다음날 07시
+        if (c !== pw) dayParts.push(seg[c].t2); // 쉬는 날 낮 시간
+      }
+      const { end } = workPeriod(w);
+      const t1 = mergeParts(nightParts.concat(dayParts), end);
+      const t2 = seg[w] ? mergeParts([seg[w].t2], end) : mergeParts([]);
+      const hasAny = nightParts.some(Boolean) || dayParts.some(Boolean) || !!seg[w];
+      if (!hasAny) continue;
+      const all = mergeParts([t1, t2]);
+      let k = stockAtOrBefore(rec, end < now ? end : now);
+      if (k === null) { const last = seg[w] || seg[pw]; k = last ? last.k : 0; }
+      all.k = k;
+      all.t1 = t1;
+      all.t2 = t2;
+      (dayData[w] = dayData[w] || {})[it.key] = all;
+    }
+  });
+}
+
+// ---------------- 필터 ----------------
+function matchFilter(it) {
+  if (activeStore !== null && it.store !== activeStore) return false;
+  if (activeCat !== null && catOf(it) !== activeCat) return false;
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  return !q || it.store.toLowerCase().includes(q) || (it.optionName || '').toLowerCase().includes(q);
+}
+
+// 달력 칸 숫자: 단위가 하나면 전체 + 1타임/2타임, 박스와 m가 섞이면 단위별 전체만
+function calCellNums(day) {
+  const all = sumsWhere(day, matchFilter);
+  const ks = Object.keys(all);
+  if (ks.length <= 1) {
+    const lb = ks[0] || '';
+    const t1 = sumsWhere(day, matchFilter, 't1')[lb] || 0;
+    const t2 = sumsWhere(day, matchFilter, 't2')[lb] || 0;
+    return `<span class="v">${fmtNum(all[lb] || 0)}${lb}</span><span class="ts">1타임 ${fmtNum(t1)}<br>2타임 ${fmtNum(t2)}</span>`;
+  }
+  return ks.sort((a, b) => UNIT_ORDER.indexOf(a) - UNIT_ORDER.indexOf(b))
+    .map((k, i) => `<span class="${i ? 'ts' : 'v'}">${fmtNum(all[k])}${k}</span>`).join('');
+}
+
+function slotTotal(day, slot) {
+  const dd = dayData[day];
+  if (!dd) return 0;
+  let n = 0;
+  items.forEach((it) => { const v = dd[it.key]; if (v && v[slot] && matchFilter(it)) n += soldBox(it.key, v[slot]); });
+  return n;
+}
+
+function dayRise(day) {
+  const dd = dayData[day];
+  if (!dd) return 0;
+  let n = 0;
+  items.forEach((it) => { if (matchFilter(it) && dd[it.key] && dd[it.key].up) n += dd[it.key].up; });
+  return n;
+}
+
+function dayPending(day) {
+  const dd = dayData[day];
+  if (!dd) return 0;
+  let n = 0;
+  items.forEach((it) => { if (matchFilter(it) && dd[it.key]) n += pendingOf(it.key, dd[it.key]); });
+  return n;
+}
+
+function dayTotal(day, storeOnly) {
+  const dd = dayData[day];
+  if (!dd) return null;
+  let sum = 0;
+  let any = false;
+  items.forEach((it) => {
+    if (storeOnly !== undefined && storeOnly !== null && it.store !== storeOnly) return;
+    if (storeOnly === undefined && !matchFilter(it)) return;
+    const v = dd[it.key];
+    if (v) { sum += soldBox(it.key, v); any = true; }
+  });
+  return any ? sum : null;
+}
+
+// ---------------- 스토어 칩 ----------------
+const PALETTE = [
+  { bg: '#e8f1ff', accent: '#3b82f6' },
+  { bg: '#fff1e0', accent: '#f59e0b' },
+  { bg: '#eaf7ea', accent: '#22a55b' },
+  { bg: '#f6e9fb', accent: '#a855f7' },
+  { bg: '#fde8ee', accent: '#ec4899' },
+  { bg: '#e0f7f7', accent: '#14b8a6' },
+  { bg: '#fffbe0', accent: '#ca8a04' },
+  { bg: '#eeeeee', accent: '#6b7280' },
+];
+let storeColors = {};
+let productColors = {};
+// 스토어마다 색 계열 하나, 같은 스토어 안에서 상품(링크)이 다르면 진하기를 다르게
+const HUES = [217, 30, 145, 271, 330, 180, 0, 90, 50, 250];
+const SHADES = [95, 88, 81, 91, 84];
+function buildColors(list) {
+  const stores = [...new Set(list.map((it) => it.store))].sort();
+  storeColors = {};
+  productColors = {};
+  stores.forEach((st, i) => {
+    const h = HUES[i % HUES.length];
+    storeColors[st] = { bg: `hsl(${h},70%,93%)`, accent: `hsl(${h},65%,48%)` };
+    const prods = [...new Set(list.filter((it) => it.store === st).sort((a, b) => a.site - b.site).map((it) => String(it.product)))];
+    prods.forEach((p, j) => {
+      productColors[p] = { bg: `hsl(${h},${j % 2 ? 60 : 75}%,${SHADES[j % SHADES.length]}%)`, accent: `hsl(${h},65%,${Math.max(30, 50 - j * 6)}%)` };
+    });
+  });
+}
+function productColor(it) { return productColors[String(it.product)] || storeColors[it.store]; }
+
+// ---------------- 업체 분류 (데코타일 / 장판) ----------------
+// 분류는 products.txt 의 [데코타일] [장판] 제목 줄로 정함 (링크 단위)
+// 제목 줄 아래 있는 링크가 그 분류. 제목 줄보다 위에 있는 링크는 첫 번째 분류로 봄
+let CATS = ['데코타일', '장판'];
+let prodCat = {}; // { 상품번호: 분류 }
+let activeCat = null;
+const catOf = (it) => prodCat[String(it.product)] || CATS[0];
+
+function dayTotalWhere(day, fn) {
+  const dd = dayData[day];
+  if (!dd) return 0;
+  let sum = 0;
+  items.forEach((it) => { if (fn(it) && dd[it.key]) sum += soldBox(it.key, dd[it.key]); });
+  return sum;
+}
+
+function renderLegend() {
+  const label = selectedDay === currentDay ? '오늘' : `${Number(selectedDay.slice(5, 7))}/${Number(selectedDay.slice(8))}`;
+  const all = dayTotal(selectedDay, null) || 0;
+  let html = `<div class="legend-all"><span class="chip${activeStore === null && activeCat === null ? ' active' : ''}" data-store="" data-cat="" style="background:#eee;border-color:#999">전체 (${label} ${fmtSums(sumsWhere(selectedDay, () => true))})</span>
+    <span class="small">분류는 products.txt의 [데코타일] [장판] 제목 줄로 정해져요 · 칸 제목을 누르면 그 분류만 보여요</span></div>`;
+  html += '<div class="cat-wrap">';
+  CATS.forEach((cat) => {
+    const inCat = items.filter((it) => catOf(it) === cat);
+    const stores = [...new Set(inCat.map((it) => it.store))];
+    html += `<div class="cat-box${activeCat === cat && activeStore === null ? ' active' : ''}">
+      <div class="cat-title" data-cat-title="${esc(cat)}">${esc(cat)} <span>(${label} ${fmtSums(sumsWhere(selectedDay, (it) => catOf(it) === cat))} · ${stores.length}곳)</span></div>
+      <div class="cat-chips">${stores.map((st) => {
+        const c = storeColors[st];
+        const t = fmtSums(sumsWhere(selectedDay, (it) => it.store === st && catOf(it) === cat));
+        const on = activeStore === st && activeCat === cat;
+        return `<span class="chip${on ? ' active' : ''}" data-store="${esc(st)}" data-cat="${esc(cat)}" style="background:${c.bg};border-color:${c.accent}">${esc(st)} (${label} ${t})</span>`;
+      }).join('') || '<span class="small">products.txt의 이 분류 제목 아래에 링크를 넣어주세요</span>'}</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  const legend = document.getElementById('legend');
+  legend.innerHTML = html;
+  legend.querySelectorAll('.chip').forEach((el) => {
+    el.addEventListener('click', () => {
+      activeStore = el.dataset.store === '' ? null : el.dataset.store;
+      activeCat = el.dataset.cat === '' ? null : el.dataset.cat;
+      renderAll();
+    });
+  });
+  legend.querySelectorAll('[data-cat-title]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const c = el.dataset.catTitle;
+      activeCat = activeCat === c && activeStore === null ? null : c;
+      activeStore = null;
+      renderAll();
+    });
+  });
+}
+
+// ---------------- 달력 ----------------
+function renderCalendar() {
+  const y = calMonth.getFullYear();
+  const m = calMonth.getMonth();
+  document.getElementById('calTitle').textContent = `${y}년 ${m + 1}월`;
+  const first = new Date(y, m, 1);
+  const lastDate = new Date(y, m + 1, 0).getDate();
+
+  const totals = {};
+  let max = 0;
+  for (let d = 1; d <= lastDate; d++) {
+    const day = ymd(new Date(y, m, d));
+    const t = dayTotal(day);
+    totals[day] = t;
+    if (t && t > max) max = t;
+  }
+
+  let html = ['일', '월', '화', '수', '목', '금', '토']
+    .map((w, i) => `<div class="cal-dow${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${w}</div>`).join('');
+  for (let i = 0; i < first.getDay(); i++) html += '<div class="cal-day blank"></div>';
+  for (let d = 1; d <= lastDate; d++) {
+    const day = ymd(new Date(y, m, d));
+    const t = totals[day];
+    const has = !!dayData[day];
+    if (!isWorkday(day)) {
+      html += `<div class="cal-day off" title="쉬는 날 판매량은 ${nextWorkday(day).slice(5).replace('-', '/')} 1타임에 포함돼요"><span class="n">${d}</span><span class="offl">휴무</span><span class="ts">→ ${Number(nextWorkday(day).slice(5, 7))}/${Number(nextWorkday(day).slice(8))}</span></div>`;
+      continue;
+    }
+    const cls = ['cal-day'];
+    if (!has) cls.push('empty');
+    if (day === selectedDay) cls.push('sel');
+    const alpha = t && max ? 0.08 + 0.35 * (t / max) : 0;
+    const style = alpha ? `style="background:rgba(59,130,246,${alpha.toFixed(2)})"` : '';
+    html += `<div class="${cls.join(' ')}" data-day="${day}" ${style}>
+      <span class="n">${d}</span>${has && dayPending(day) > 0 ? '<span class="warn" title="수동변경 의심 있음">!</span>' : ''}${has && dayRise(day) > 0 ? '<span class="up" title="재고 대량 증가 있음">▲</span>' : ''}${day === currentDay ? '<span class="live">진행중</span>' : ''}
+      ${has ? calCellNums(day) : ''}
+    </div>`;
+  }
+  const cal = document.getElementById('cal');
+  cal.innerHTML = html;
+  cal.querySelectorAll('.cal-day[data-day]').forEach((el) => {
+    if (el.classList.contains('empty')) return;
+    el.addEventListener('click', () => {
+      selectedDay = el.dataset.day;
+      openKey = null;
+      showAllFor = null;
+      renderAll();
+    });
+  });
+}
+
+// ---------------- 선택한 날 표 ----------------
+function soldCell(v, key) {
+  if (!v) return '-';
+  let html = fmtQty(key, soldOf(key, v));
+  if (v.u > 0) {
+    const tip = `기록이 ${LONG_GAP_HOURS}시간 넘게 비어 있던 동안 줄어든 양. 언제 팔렸는지 알 수 없어 합계에서 뺐어요`;
+    html += `<br><span class="unk" title="${tip}">+${fmtQty(key, v.u)} 기간불명</span>`;
+  }
+  const pend = pendingOf(key, v);
+  if (pend > 0) html += `<br><span class="sus" title="줄을 누르면 이유를 보고 판매로 인정할 수 있어요">+${fmtQty(key, pend)} 수동변경 의심</span>`;
+  if (v.up > 0) html += `<br><span class="rise" title="한 번에 ${DETECT.BIG_RISE.toLocaleString()}개 이상 늘어난 기록이 있어요 (입고 또는 사람이 재고 숫자를 늘림)">▲ +${fmtQty(key, v.up)} 재고 증가</span>`;
+  const acc = soldOf(key, v) - v.s;
+  if (acc > 0) html += `<br><span class="ok">의심 ${fmtQty(key, acc)} 인정 포함</span>`;
+  return html;
+}
+
+function lastRecord(key) {
+  const rec = historyData[key] || {};
+  const ts = Object.keys(rec).sort().pop();
+  return ts ? { t: ts, v: rec[ts] } : null;
+}
+
+function recordsHtml(key, day, all) {
+  const fl = flagsAll[key] || {};
+  const rec = historyData[key] || {};
+  const entries = Object.keys(rec).sort().map((t) => ({ t, dt: toDate(t), v: rec[t] }));
+  if (!entries.length) return '<div class="small">시간별 기록 없음 (14일 지난 기록은 일별 합계만 남아 있음)</div>';
+
+  let list;
+  if (all) {
+    list = entries;
+  } else {
+    const { start, end } = workPeriod(day);
+    list = entries.filter((e) => e.dt >= start && e.dt < end);
+    // 마지막 구간 줄어든 양은 다음 기록과의 차이라서 그 기록도 같이 보여줌
+    const next = entries.find((e) => e.dt >= end);
+    if (list.length && next) list.push(Object.assign({ nextDay: true }, next));
+  }
+  if (!list.length) return '<div class="small">이 날 기록 없음</div>';
+
+  let html = '<div class="recs">';
+  let lastDay = '';
+  let prev = null;
+  if (all) {
+    list.forEach((e) => {
+      const bd = bizDayOf(e.dt);
+      if (bd !== lastDay) { html += `<div class="dayhdr">${bd} 영업일</div>`; lastDay = bd; }
+      html += recLine(e, prev, fl);
+      prev = e;
+    });
+  } else {
+    const { split } = workPeriod(day);
+    let sec = '';
+    list.forEach((e) => {
+      const ns = e.nextDay ? sec : (e.dt < split ? '1' : '2');
+      if (ns !== sec) {
+        html += `<div class="dayhdr">${ns === '1' ? '1타임 (직전 근무일 17시 ~ 07시)' : '2타임 (07~17시)'}</div>`;
+        sec = ns;
+      }
+      html += recLine(e, prev, fl);
+      prev = e;
+    });
+  }
+  return html + '</div>';
+}
+
+function recLine(e, prev, fl) {
+  let diff = '';
+  if (e.base) diff = '<span class="base">전날 기준</span>';
+  else if (prev) {
+    const d = prev.v - e.v;
+    if (d > 0 && fl && fl[e.t]) diff = `<span class="s" title="${esc(fl[e.t].why.join(', '))}">-${d.toLocaleString()} 의심</span>`;
+    else if (d > 0) diff = `<span class="d">-${d.toLocaleString()}</span>`;
+    else if (d < 0 && -d >= DETECT.BIG_RISE) diff = `<span class="up">▲ +${(-d).toLocaleString()} 대량 증가</span>`;
+    else if (d < 0) diff = `<span class="p">+${(-d).toLocaleString()} 입고</span>`;
+    else diff = '<span class="base">변화없음</span>';
+  }
+  return `<div class="r"><span>${fmtDT(e.dt)}${e.nextDay ? ' (다음 기록)' : ''}</span><span>${e.v.toLocaleString()}개</span><span>${diff}</span></div>`;
+}
+
+function slotCell(p, key) {
+  if (!p) return '<span class="small">-</span>';
+  let h = fmtQty(key, soldOf(key, p));
+  const pend = pendingOf(key, p);
+  if (p.u > 0) h += `<br><span class="unk">+${fmtQty(key, p.u)} 기간불명</span>`;
+  if (pend > 0) h += `<br><span class="sus">+${fmtQty(key, pend)} 의심</span>`;
+  if (p.up > 0) h += `<br><span class="rise">▲ +${fmtQty(key, p.up)}</span>`;
+  return h;
+}
+
+function riseHtml(v) {
+  if (!v || !v.upEv || !v.upEv.length) return '';
+  let html = '<div class="rise-box"><b>재고 대량 증가</b> · 입고했거나 판매자가 재고 숫자를 직접 늘린 기록이에요 (판매량 계산에는 영향 없음)';
+  v.upEv.forEach(([t, d, from, to]) => {
+    html += `<div class="ev"><span>${fmtDT(toDate(t))}</span><b>▲ +${d.toLocaleString()}개</b><span class="small">${Number(from).toLocaleString()}개 → ${Number(to).toLocaleString()}개</span></div>`;
+  });
+  return html + '</div>';
+}
+
+function susHtml(key, v) {
+  if (!v || !v.ev || !v.ev.length) return '';
+  let html = '<div class="sus-box"><b>수동변경 의심</b> · 판매가 아니라 판매자가 재고 숫자를 직접 고친 것으로 보이는 감소예요';
+  v.ev.forEach(([t, d, why]) => {
+    const id = evId(key, t);
+    const on = approved.has(id);
+    html += `<div class="ev"><span>${fmtDT(toDate(t))}</span><b>-${d.toLocaleString()}개</b><span class="why">${esc(why)}</span>
+      ${canEdit
+        ? `<button data-approve="${esc(id)}" class="${on ? 'on' : ''}">${on ? '판매로 인정됨 (취소)' : '판매로 인정'}</button>`
+        : `<span class="${on ? 'ok' : 'why'}">${on ? '판매로 인정됨' : '미인정'}</span>`}</div>`;
+  });
+  return html + '</div>';
+}
+
+function renderTable() {
+  const live = selectedDay === currentDay;
+  const { start, end } = workPeriod(selectedDay);
+  const [yy, mm, dd] = selectedDay.split('-').map(Number);
+  document.getElementById('dayTitle').textContent = `${yy}년 ${mm}월 ${dd}일 판매량${live ? ' (진행중)' : ''}`;
+  document.getElementById('daySub').textContent = `${fmtDT(start)} ~ ${live ? '지금' : fmtDT(end)} 기준 · 줄을 누르면 시간별 재고 기록이 펼쳐져요`;
+  document.getElementById('stockHead').textContent = live ? '현재 재고' : '마감 재고';
+
+  const dd0 = dayData[selectedDay] || {};
+  const rows = items
+    .filter(matchFilter)
+    .map((it) => {
+      const v = dd0[it.key] || null;
+      const last = lastRecord(it.key);
+      return { it, v, site: it.site, s: v ? soldBox(it.key, v) : -1, t1: v && v.t1 ? soldBox(it.key, v.t1) : -1, t2: v && v.t2 ? soldBox(it.key, v.t2) : -1, k: v ? toBox(it.key, v.k) : -1, store: it.store, optionName: it.optionName || '', last: last ? last.t : '' };
+    });
+
+  rows.sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  const withData = rows.filter((r) => r.v).length;
+  document.getElementById('count').innerHTML = `${rows.length}개 옵션 표시중 (이 날 기록 있는 옵션 ${withData}개, 전체 ${items.length}개)` +
+    (sortKey !== 'site' ? ' · <a href="#" id="siteSort">사이트 순서로 되돌리기</a>' : ' · 사이트 옵션 순서');
+  const ss = document.getElementById('siteSort');
+  if (ss) ss.addEventListener('click', (e) => { e.preventDefault(); sortKey = 'site'; sortAsc = true; renderTable(); });
+
+  const tbody = document.getElementById('tbody');
+  let html = '';
+  rows.forEach((r) => {
+    const c = productColor(r.it);
+    const hi = r.v && r.s >= 10 ? 'sold sold-high' : 'sold';
+    const last = lastRecord(r.it.key);
+    html += `<tr class="row" data-key="${esc(r.it.key)}" style="background:${c ? c.bg : '#fff'}">
+      <td style="font-weight:600;border-left:6px solid ${c ? c.accent : 'transparent'};white-space:nowrap">${esc(r.store)}</td>
+      <td>${esc(r.optionName)}</td>
+      <td class="num ${hi}">${soldCell(r.v, r.it.key)}</td>
+      <td class="num">${slotCell(r.v && r.v.t1, r.it.key)}</td>
+      <td class="num">${slotCell(r.v && r.v.t2, r.it.key)}</td>
+      <td class="num">${r.v ? fmtQty(r.it.key, r.v.k) : '-'}${unitNote(r.it.key) ? `<br><span class="small">${unitNote(r.it.key)}</span>` : ''}</td>
+      <td class="num small">${last ? last.t.replace('T', ' ') : '-'}</td>
+    </tr>`;
+    if (openKey === r.it.key) {
+      const all = showAllFor === r.it.key;
+      html += `<tr class="detail"><td colspan="7">
+        <div class="detail-head">
+          <b>${esc(r.optionName)}</b>
+          <button data-toggle-all="${esc(r.it.key)}">${all ? '이 날 기록만 보기' : '전체 기록 보기 (최근 14일)'}</button>
+        </div>
+        ${riseHtml(r.v)}
+        ${susHtml(r.it.key, r.v)}
+        ${recordsHtml(r.it.key, selectedDay, all)}
+      </td></tr>`;
+    }
+  });
+  tbody.innerHTML = html;
+
+  tbody.querySelectorAll('tr.row').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      const k = tr.dataset.key;
+      openKey = openKey === k ? null : k;
+      showAllFor = null;
+      renderTable();
+    });
+  });
+  tbody.querySelectorAll('button[data-approve]').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = b.dataset.approve;
+      if (!canEdit) {
+        alert('이 컴퓨터는 보기 전용이에요. 위쪽의 "이 컴퓨터에서도 편집 켜기"를 먼저 눌러주세요.');
+        return;
+      }
+      if (saving) return;
+      const on = !approved.has(id);
+      if (on) approved.add(id); else approved.delete(id);
+      saving = true;
+      setModeLabel();
+      renderAll();
+      saveApprovals([id], on)
+        .then((r) => { approved = new Set(Object.keys(r)); })
+        .catch((err) => { alert('판매 인정 저장 실패: ' + err.message + '\n잠시 후 다시 눌러주세요.'); if (on) approved.delete(id); else approved.add(id); })
+        .finally(() => { saving = false; setModeLabel(); renderAll(); });
+    });
+  });
+  tbody.querySelectorAll('button[data-toggle-all]').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const k = b.dataset.toggleAll;
+      showAllFor = showAllFor === k ? null : k;
+      renderTable();
+    });
+  });
+}
+
+function renderAll() {
+  renderLegend();
+  renderCalendar();
+  renderTable();
+}
+
+// ---------------- 기존 엑셀(네이버 판매량 예측) 양식용 설정 ----------------
+// 각 칸이 어떤 상품 옵션인지 정리. 상품번호와 옵션 이름 일부(띄어쓰기, - 무시)로 찾음
+// 이름 끝에 $ 가 붙으면 옵션 이름이 그 글자로 끝나야 함 (비슷한 이름끼리 헷갈리지 않게)
+// 후보가 여러 개면 앞에서부터 기록 있는 상품을 씀
+const SHEET_HOURS = { morning: 9, evening: 17 }; // 출근 = 9시 기록, 9시~17시 = 17시 기록
+const DODEN_X = ['6941645716', '6972896159'];   // 테라조스톤470각 반평 후보
+const DODEN_INK = ['8401133332', '8425135325'];  // 더잉크 반평 후보
+const cand = (prods, key) => prods.map((p) => [p, key]);
+const SHEET_LAYOUT = [
+  { tier: 1, name: '도든', start: 'G', cols: [
+    ...['오트밀크림', '브레드버터', '내추럴라떼', '뉴트럴오트', '퓨어바닐라', '헤리티지크림', '코지그레이', '애쉬그레이', '토프베이지',
+      '테라조딥그레이', '테라조테라레드', '미스트라이트그레이', '미스트미드그레이', '미스트딥다크',
+      '로우콘크리트그레이', '로우콘크리트딥그레이', '로우콘크리트샌드'].map((k) => [['11763529292', '/' + k + '$']]),
+    ...['(D3)', '(D1)', '(D2)', '(D4)', '(D5)', '(D6)'].map((k) => cand(DODEN_X, k + '$')),
+    ...['더허브', '더로맨틱', '더포레스트', '더스페이스'].map((k) => cand(DODEN_INK, k + '$')),
+    ...['헤리티지샌드', '헤리티지크림', '헤리티지그레이', '어반바닐라', '어반스톤', '어반블렌딩', '매트그레이우드'].map((k) => [['9978717845', '/' + k]]),
+  ] },
+  { tier: 1, name: '데코사랑', start: 'AS', cols: [
+    'TI13N', 'TI03', 'TI02', 'TI07', 'TI08', 'TI05', 'TI06', 'TI20', 'TI21', 'TI14N', 'TI15', 'TI16', 'TI17',
+    'TI11', 'TI12', 'TI01', 'TI19', 'TI18', 'WTI31', 'WTI32', 'WTI33', 'WTI34', 'WTI35', 'WTI36', 'WTI37', 'WTI38',
+  ].map((k) => [['3987432580', '(' + k + ')']]) },
+  { tier: 1, name: 'ZIPAN', start: 'BW', cols: [
+    '1.5mm_602', '1.5mm_603', '1.5mm_604', '1.5mm_606', '1.5mm_607', '1.5mm_617', '1.5mm_663', '1.5mm_6011', '1.5mm_6064',
+    '1.5mm_609', '1.5mm_673', '2.0mm_04', '2.0mm_15', '2.0mm_40', '2.0mm_59', '2.0mm_62', '2.0mm_64', '2.0mm_65', '2.0mm_74',
+    '2.0mm_243', '2.0mm_245', '2.0mm_674', '2.0mm_676',
+  ].map((k) => [['7144692685', k + '$']]) },
+  { tier: 2, name: '룸스토어', start: 'G', cols: [
+    'MTS6151', 'MTS6152', 'MTS6153', 'MTS6154', 'MTS6161', 'MTS6162', 'MTS6163', 'MTS6164', 'MTS6112', 'MTS6111', 'MTS6132', 'MTS6131',
+    'MTS6141', 'MTS6142', 'MTS6143', 'MTS6144', 'NPT1633', 'NPT1627', 'DBT3089', 'DBT3088', 'DBT3086', 'DBT3091', 'DBT3082', 'DBT3081',
+  ].map((k) => [['10249302300', k]]) },
+  { tier: 2, name: '데코타일몰', start: 'AS', cols: [
+    'DBT3089', 'DBT3088', 'DBT3086', 'DBT3091', 'DBT3082', 'DBT3081', 'MTS6151', 'MTS6152', 'MTS6153', 'MTS6154', 'MTS6161', 'MTS6162',
+    'MTS6163', 'MTS6164', 'MTS6131', 'MTS6132', 'MTS6111', 'MTS6112', 'MTS6141', 'MTS6142', 'MTS6143', 'MTS6144', 'NPT1633', 'NPT1627',
+  ].map((k) => [['13312563689', '/' + k]]) },
+  { tier: 2, name: '아르빙', start: 'BW', cols: [
+    ...['마블블루그레이', '마블딥그레이', '마블화이트', '실버화이트', '허니스톤(그레이톤)', '그레이스톤', '테라조그레이', '테라조베이지',
+      '테라조스노우칩', '테라조화이트', '허니스톤(베이지톤)', '오트베이지', '스톤그레이', '단색실버', '실버마블'].map((k) => [['11859874315', '1.접착식/' + k + '$']]),
+    ...['마블화이트', '허니스톤', '오트베이지', '실버마블', '스톤그레이', '모카샌드', '마블딥그레이', '단색실버', '단색딥그레이',
+      '테라조그레이', '테라로베이지', '테라조화이트'].map((k) => [['11859874315', '2.비접착식/' + k + '$']]),
+  ] },
+];
+
+const normName = (s) => String(s || '').replace(/[\s-]/g, '');
+
+function colToNum(c) { let n = 0; for (const ch of c) n = n * 26 + (ch.charCodeAt(0) - 64); return n; }
+function numToCol(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+
+// 칸 설정에 맞는 옵션 키 찾기 (한 번 찾으면 기억)
+const sheetKeyCache = {};
+function findSheetKey(prod, key) {
+  const id = prod + '|' + key;
+  if (id in sheetKeyCache) return sheetKeyCache[id];
+  const ends = key.endsWith('$');
+  const k = normName(ends ? key.slice(0, -1) : key);
+  const found = allItems.find((it) => {
+    if (String(it.product) !== prod) return false;
+    const n = normName(it.optionName);
+    return ends ? n.endsWith(k) : n.includes(k);
+  });
+  return (sheetKeyCache[id] = found ? found.key : null);
+}
+
+// 그 날짜 그 시간의 재고 (정각 기록이 없으면 그 전 3시간 안의 가장 가까운 기록)
+function stockAt(key, day, hour) {
+  const rec = historyData[key];
+  if (!rec) return null;
+  for (let h = hour; h >= Math.max(0, hour - 3); h--) {
+    const t = `${day}T${pad(h)}:00`;
+    if (rec[t] != null) return { v: rec[t], t, exact: h === hour };
+  }
+  return null;
+}
+
+// 한 구역(예: 도든 G~AN) 값 목록
+function sectionValues(sec, day, hour) {
+  return sec.cols.map((cands) => {
+    for (const [prod, key] of cands) {
+      const k = findSheetKey(prod, key);
+      if (!k) continue;
+      const s = stockAt(k, day, hour);
+      if (s) return s;
+    }
+    return null;
+  });
+}
+
+function sectionRange(sec) {
+  const s = colToNum(sec.start);
+  return `${sec.start}~${numToCol(s + sec.cols.length - 1)}`;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  }
+}
+
+function renderSheetPanel() {
+  const panel = document.getElementById('sheetPanel');
+  if (panel.hidden) return;
+  const daySel = document.getElementById('sfDay');
+  const hourSel = document.getElementById('sfHour');
+  const days = [...new Set(allItems.flatMap((it) => Object.keys(historyData[it.key] || {}).map((t) => t.slice(0, 10))))].sort().reverse();
+  if (!daySel.options.length || daySel.dataset.sig !== days.join()) {
+    const keep = daySel.value;
+    daySel.innerHTML = days.map((d) => `<option value="${d}">${d}</option>`).join('');
+    daySel.dataset.sig = days.join();
+    if (keep && days.includes(keep)) daySel.value = keep;
+  }
+  const day = daySel.value;
+  const hour = Number(hourSel.value);
+
+  let html = '';
+  [1, 2].forEach((tier) => {
+    html += `<div class="sf-tier">${tier === 1 ? '첫째 칸 (도든 · 데코사랑 · ZIPAN) 오늘재고 줄' : '둘째 칸 (룸스토어 · 데코타일몰 · 아르빙) 오늘재고 줄'}</div>`;
+    SHEET_LAYOUT.filter((s) => s.tier === tier).forEach((sec) => {
+      const vals = sectionValues(sec, day, hour);
+      const miss = vals.filter((v) => !v).length;
+      const approx = vals.filter((v) => v && !v.exact).length;
+      const idx = SHEET_LAYOUT.indexOf(sec);
+      html += `<div class="sf-sec">
+        <div class="sf-head">
+          <b>${esc(sec.name)}</b><span class="small">${sectionRange(sec)} (${sec.cols.length}칸) · ${sec.start}칸 클릭 후 붙여넣기</span>
+          <button class="sf-copy" data-sec="${idx}">복사</button>
+          ${miss ? `<span class="sus">${miss}칸 기록 없음 (빈칸으로 복사됨)</span>` : ''}
+          ${approx ? `<span class="unk">${approx}칸은 정각 기록이 없어 직전 기록 사용</span>` : ''}
+        </div>
+        <div class="sf-vals">${vals.map((v, i) => `<span title="${numToCol(colToNum(sec.start) + i)}열">${v ? v.v.toLocaleString() : '·'}</span>`).join('')}</div>
+      </div>`;
+    });
+  });
+  document.getElementById('sfBody').innerHTML = html;
+  document.querySelectorAll('.sf-copy').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const sec = SHEET_LAYOUT[Number(b.dataset.sec)];
+      const vals = sectionValues(sec, day, hour);
+      const ok = await copyText(vals.map((v) => (v ? v.v : '')).join('\t'));
+      b.textContent = ok ? '복사됨' : '복사 실패';
+      setTimeout(() => { b.textContent = '복사'; }, 1500);
+    });
+  });
+}
+
+// 엑셀 다운로드용: 기존 양식과 같은 열 위치에 값을 채운 시트
+function buildSheetFormRows() {
+  const days = [...new Set(allItems.flatMap((it) => Object.keys(historyData[it.key] || {}).map((t) => t.slice(0, 10))))].sort();
+  const maxCol = Math.max(...SHEET_LAYOUT.map((s) => colToNum(s.start) + s.cols.length - 1));
+  const rows = [];
+  const header = new Array(maxCol).fill('');
+  header[0] = '날짜/시간';
+  header[5] = '구분';
+  SHEET_LAYOUT.forEach((sec) => { header[colToNum(sec.start) - 1] = `${sec.name} →`; });
+  rows.push(header);
+  days.forEach((day) => {
+    [['출근', SHEET_HOURS.morning], ['9시~17시', SHEET_HOURS.evening]].forEach(([label, hour]) => {
+      [1, 2].forEach((tier) => {
+        const row = new Array(maxCol).fill('');
+        row[0] = `${day.slice(2).replace(/-/g, '')}(${label})`;
+        row[5] = tier === 1 ? '도든/데코사랑/ZIPAN' : '룸스토어/데코타일몰/아르빙';
+        let any = false;
+        SHEET_LAYOUT.filter((s) => s.tier === tier).forEach((sec) => {
+          sectionValues(sec, day, hour).forEach((v, i) => {
+            if (v) { row[colToNum(sec.start) - 1 + i] = v.v; any = true; }
+          });
+        });
+        if (any) rows.push(row);
+      });
+    });
+  });
+  return rows;
+}
+
+// ---------------- 엑셀 다운로드 ----------------
+function downloadExcel() {
+  if (typeof XLSX === 'undefined') { alert('엑셀 기능을 불러오지 못했어요. 새로고침 후 다시 눌러주세요.'); return; }
+  const days = Object.keys(dayData).sort();
+  const wb = XLSX.utils.book_new();
+
+  // 1. 일별 판매 (한 줄 = 하루 x 옵션)
+  const daily = [['날짜', '스토어', '상품명', '옵션', '전체 판매', '1타임(17~07시)', '2타임(07~17시)', '기간불명', '수동변경의심(미인정)', '마감재고', '단위', '비고']];
+  days.forEach((day) => {
+    items.forEach((it) => {
+      const v = dayData[day][it.key];
+      if (!v) return;
+      const r1 = (n) => Math.round(n * 10) / 10;
+      daily.push([day, it.store, it.productName || '', it.optionName || '', r1(soldBox(it.key, v)), v.t1 ? r1(soldBox(it.key, v.t1)) : '', v.t2 ? r1(soldBox(it.key, v.t2)) : '', r1(toBox(it.key, v.u || 0)), r1(toBox(it.key, pendingOf(it.key, v))), r1(toBox(it.key, v.k)), unitLabel(it.key) + (unitNote(it.key) ? ` (${unitNote(it.key)})` : ''), day === currentDay ? '진행중(마감전)' : (v.t1 ? '' : '옛 기준(18시 마감) 보관값')]);
+    });
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(daily);
+  ws1['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 40 }, { wch: 40 }, { wch: 9 }, { wch: 13 }, { wch: 13 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 22 }];
+  XLSX.utils.book_append_sheet(wb, ws1, '일별판매');
+
+  // 2. 날짜표 (행 = 옵션, 열 = 날짜)
+  const head = ['스토어', '상품명', '옵션', '단위', ...days, '합계'];
+  const table = [head];
+  items.forEach((it) => {
+    let sum = 0;
+    const cells = days.map((day) => {
+      const v = dayData[day][it.key];
+      if (!v) return '';
+      const n = Math.round(soldBox(it.key, v) * 10) / 10;
+      sum += n;
+      return n;
+    });
+    table.push([it.store, it.productName || '', it.optionName || '', unitLabel(it.key), ...cells, Math.round(sum * 10) / 10]);
+  });
+  UNIT_ORDER.forEach((lb) => {
+    if (!items.some((it) => unitLabel(it.key) === lb)) return;
+    const row = [`합계(${lb})`, '', '', lb];
+    days.forEach((day) => row.push(Math.round((sumsWhere(day, (it) => unitLabel(it.key) === lb)[lb] || 0) * 10) / 10));
+    row.push(Math.round(row.slice(4).reduce((a, b) => a + b, 0) * 10) / 10);
+    table.push(row);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(table);
+  ws2['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 40 }, { wch: 6 }, ...days.map(() => ({ wch: 11 })), { wch: 8 }];
+  XLSX.utils.book_append_sheet(wb, ws2, '날짜별표');
+
+  // 3. 시간별 재고 원본
+  const hourly = [['시간', '영업일', '스토어', '상품명', '옵션', '재고', '변화']];
+  items.forEach((it) => {
+    const rec = historyData[it.key] || {};
+    let prev = null;
+    Object.keys(rec).sort().forEach((t) => {
+      const v = rec[t];
+      hourly.push([t.replace('T', ' '), bizDayOf(toDate(t)), it.store, it.productName || '', it.optionName || '', v, prev === null ? '' : v - prev]);
+      prev = v;
+    });
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(hourly);
+  ws3['!cols'] = [{ wch: 17 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 40 }, { wch: 8 }, { wch: 8 }];
+  XLSX.utils.book_append_sheet(wb, ws3, '시간별재고');
+
+  // 4. 수동변경 의심 목록
+  const sus = [['영업일', '시간', '스토어', '상품명', '옵션', '감소수량', '의심 이유', '판매로 인정']];
+  days.forEach((day) => {
+    items.forEach((it) => {
+      const v = dayData[day][it.key];
+      (v && v.ev ? v.ev : []).forEach(([t, d, why]) => {
+        sus.push([day, t.replace('T', ' '), it.store, it.productName || '', it.optionName || '', d, why, approved.has(evId(it.key, t)) ? '인정' : '미인정']);
+      });
+    });
+  });
+  const ws4 = XLSX.utils.aoa_to_sheet(sus);
+  ws4['!cols'] = [{ wch: 12 }, { wch: 17 }, { wch: 12 }, { wch: 30 }, { wch: 40 }, { wch: 9 }, { wch: 60 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws4, '수동변경의심');
+
+  // 4-2. 재고 대량 증가 목록
+  const ups = [['영업일', '시간', '스토어', '상품명', '옵션', '증가수량', '이전 재고', '바뀐 재고']];
+  days.forEach((day) => {
+    items.forEach((it) => {
+      const v = dayData[day][it.key];
+      (v && v.upEv ? v.upEv : []).forEach(([t, d, from, to]) => {
+        ups.push([day, t.replace('T', ' '), it.store, it.productName || '', it.optionName || '', d, from, to]);
+      });
+    });
+  });
+  const ws4b = XLSX.utils.aoa_to_sheet(ups);
+  ws4b['!cols'] = [{ wch: 12 }, { wch: 17 }, { wch: 12 }, { wch: 30 }, { wch: 40 }, { wch: 9 }, { wch: 10 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws4b, '재고대량증가');
+
+  // 5. 기존 엑셀 양식과 같은 열 위치 (G열, AS열, BW열 등)에 재고를 채운 시트
+  const ws5 = XLSX.utils.aoa_to_sheet(buildSheetFormRows());
+  ws5['!cols'] = [{ wch: 18 }, {}, {}, {}, {}, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, ws5, '기존양식_재고');
+
+  const now = new Date();
+  const name = `판매량기록_${ymd(now).replace(/-/g, '')}_${pad(now.getHours())}${pad(now.getMinutes())}.xlsx`;
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ---------------- 데이터 불러오기 ----------------
+// 데이터 읽는 순서
+// 1. 깃허브 API (가장 최신, 단 같은 인터넷(IP)에서 시간당 60번 제한)
+// 2. raw.githubusercontent (제한 없음, 최대 5분 늦을 수 있음)
+// 3. 깃허브 페이지스 사본 (자주 멈춰서 몇 시간씩 옛날 데이터일 수 있어 마지막 수단)
+const RAW_BASE = 'https://raw.githubusercontent.com/ds4eqm-lgtm/commerce-insight/main/';
+function apiBlocked() {
+  if (ghToken) return false; // 토큰이 있으면 시간당 5,000번이라 막힐 일이 거의 없음
+  try { return Date.now() < Number(localStorage.getItem('ghApiBlockedUntil') || 0); } catch (e) { return false; }
+}
+function blockApi() {
+  try { localStorage.setItem('ghApiBlockedUntil', String(Date.now() + 15 * 60 * 1000)); } catch (e) { /* 무시 */ }
+}
+
+async function fetchRepoFile(path) {
+  if (!apiBlocked()) {
+    try {
+      const headers = { Accept: 'application/vnd.github.raw+json' };
+      if (ghToken) headers.Authorization = `token ${ghToken}`; // 토큰이 있으면 시간당 5,000번까지 읽기 가능
+      const res = await fetch(REPO_API + path + (ghToken ? '?t=' + Date.now() : ''), { headers, cache: 'no-store' });
+      if (res.ok) return { text: await res.text(), source: 'github' };
+      if (res.status === 403 || res.status === 429) blockApi(); // 시간당 횟수 제한 걸림
+      else if (res.status === 404) throw Object.assign(new Error(path + ' 없음'), { notFound: true });
+    } catch (e) {
+      if (e.notFound) throw e;
+    }
+  }
+  try {
+    const res = await fetch(RAW_BASE + path + '?t=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) return { text: await res.text(), source: 'raw' };
+    if (res.status === 404) throw Object.assign(new Error(path + ' 없음'), { notFound: true });
+  } catch (e) {
+    if (e.notFound) throw e;
+  }
+  const res = await fetch(path + '?_=' + Date.now());
+  if (!res.ok) throw new Error(path + ' 불러오기 실패');
+  return { text: await res.text(), source: 'pages' };
+}
+
+async function loadActiveProducts() {
+  try {
+    const { text } = await fetchRepoFile('products.txt');
+    const nums = [];
+    const cat = {};
+    const units = {};
+    const offs = new Set();
+    const works = new Set();
+    const order = [];
+    let current = null;
+    text.replace(/^﻿/, '').split(/\r?\n/).forEach((raw) => {
+      const l = raw.trim();
+      const h = l.match(/^\[(.+)\]$/);
+      if (h) {
+        current = h[1].trim();
+        if (current !== '휴무일' && current !== '근무일' && !order.includes(current)) order.push(current);
+        return;
+      }
+      if (current === '휴무일' || current === '근무일') {
+        const dm = l.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
+        if (dm) (current === '휴무일' ? offs : works).add(`${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`);
+        return;
+      }
+      const m = l.match(/products\/(\d+)/);
+      if (!m) return;
+      nums.push(m[1]);
+      // 링크 뒤 단위 표시: '9장' → 박스 환산, '20cm' / '1m' → m 환산
+      const tail = l.slice(l.indexOf(m[0]) + m[0].length);
+      const uj = tail.match(/(\d+)\s*장/);
+      const ucm = tail.match(/(\d+(?:\.\d+)?)\s*cm/i);
+      const um = tail.match(/(\d+(?:\.\d+)?)\s*m(?![a-z])/i);
+      if (uj && Number(uj[1]) > 1) units[m[1]] = { div: Number(uj[1]), label: '박스' };
+      else if (ucm && Number(ucm[1]) > 0) units[m[1]] = { div: 100 / Number(ucm[1]), label: 'm' };
+      else if (um && !ucm && Number(um[1]) > 0) units[m[1]] = { div: 1 / Number(um[1]), label: 'm' };
+      if (current && !(m[1] in cat)) cat[m[1]] = current;
+    });
+    if (order.length) {
+      CATS = order.slice();
+      if (CATS.length === 1) CATS.push(CATS[0] === '장판' ? '데코타일' : '장판');
+    }
+    prodCat = cat;
+    unitDiv = units;
+    extraOff = offs;
+    extraWork = works;
+    return nums.length ? nums : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function loadApproved() {
+  try {
+    const { text } = await fetchRepoFile('data/approved.json');
+    return new Set(Object.keys(JSON.parse(text) || {}));
+  } catch (e) {
+    return new Set(); // 아직 인정한 게 없으면 파일이 없음
+  }
+}
+
+async function loadData(isRefresh) {
+  const [latestF, historyF, active, appr] = await Promise.all([
+    fetchRepoFile('data/latest.json'),
+    fetchRepoFile('data/history.json'),
+    loadActiveProducts(),
+    loadApproved(),
+  ]);
+  if (!saving) approved = appr;
+  const latest = JSON.parse(latestF.text);
+  historyData = JSON.parse(historyF.text);
+  flagsAll = detectSuspicious(historyData);
+  const srcs = [latestF.source, historyF.source];
+  lastSource = srcs.includes('pages') ? 'pages' : srcs.includes('raw') ? 'raw' : 'github';
+  const sourceLabel = srcs.includes('pages') ? '페이지스 사본(옛날 데이터일 수 있음)' : srcs.includes('raw') ? '깃허브 원본(최대 5분 지연)' : '깃허브 원본';
+
+  items = Object.entries(latest).map(([key, it]) => Object.assign({ key }, it));
+  // 옵션이 없는 상품은 옵션명이 '기본'으로 들어오므로 상품명으로 바꿔서 보여줌
+  items.forEach((it) => {
+    if (!it.optionName || ['기본', '기본옵션', 'default'].includes(String(it.optionName).trim())) {
+      it.optionName = it.productName || it.optionName;
+    }
+  });
+  allItems = items.slice();
+  productOfKey = {};
+  catOfKey = {};
+  items.forEach((it) => { productOfKey[it.key] = String(it.product); catOfKey[it.key] = catOf(it); });
+  Object.keys(sheetKeyCache).forEach((k) => delete sheetKeyCache[k]);
+  // 사이트 옵션 순서: products.txt 상품 순서 → 상품 안에서는 옵션이 처음 기록된 순서(사이트 순서)
+  const optIdx = {};
+  items.forEach((it, i) => { optIdx[it.key] = i; });
+  const prodRank = {};
+  (active || []).forEach((p, i) => { if (!(p in prodRank)) prodRank[p] = i; });
+  items.forEach((it) => { it.site = (prodRank[String(it.product)] ?? 999) * 100000 + optIdx[it.key]; });
+  if (active) items = items.filter((it) => String(it.product) in prodRank);
+  items.sort((a, b) => a.site - b.site);
+
+  if (!items.length) {
+    document.getElementById('updated').textContent = '아직 수집된 데이터가 없음. 첫 자동 실행을 기다려주세요.';
+    return;
+  }
+
+  let maxTs = '';
+  items.forEach((it) => {
+    const ts = Object.keys(historyData[it.key] || {}).sort().pop();
+    if (ts && ts > maxTs) maxTs = ts;
+  });
+  const lagH = maxTs ? (Date.now() - toDate(maxTs).getTime()) / 3600000 : 0;
+  document.getElementById('updated').textContent = maxTs
+    ? `데이터 기준 최근 확인: ${maxTs.replace('T', ' ')}  ·  출처: ${sourceLabel}${lagH > 3 ? '  ·  3시간 넘게 새 기록 없음, 관리용 컴퓨터 자동조회 확인 필요' : ''}`
+    : '데이터 없음';
+
+  const now = new Date();
+  const prevCurrent = currentDay;
+  buildDayData(now);
+  // 새로고침 때는 보고 있던 날짜 유지 (진행중인 날을 보고 있었으면 새 진행중 날짜로)
+  if (!isRefresh || !selectedDay || selectedDay === prevCurrent || !dayData[selectedDay]) selectedDay = currentDay;
+  if (!isRefresh || !calMonth) {
+    const cd = toDate(selectedDay);
+    calMonth = new Date(cd.getFullYear(), cd.getMonth(), 1);
+  }
+
+  const stores = [...new Set(items.map((it) => it.store))].sort();
+  buildColors(items);
+
+  document.getElementById('excelBtn').disabled = false;
+  document.getElementById('sheetBtn').disabled = false;
+  renderSheetPanel();
+  renderAll();
+}
+
+document.getElementById('search').addEventListener('input', renderAll);
+document.getElementById('excelBtn').addEventListener('click', downloadExcel);
+document.getElementById('sheetBtn').addEventListener('click', () => {
+  const p = document.getElementById('sheetPanel');
+  p.hidden = !p.hidden;
+  if (!p.hidden) {
+    const h = new Date().getHours();
+    document.getElementById('sfHour').value = h >= 17 ? '17' : '9';
+    renderSheetPanel();
+  }
+});
+document.getElementById('sfDay').addEventListener('change', renderSheetPanel);
+document.getElementById('sfHour').addEventListener('change', renderSheetPanel);
+document.getElementById('prevM').addEventListener('click', () => {
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1);
+  renderCalendar();
+});
+document.getElementById('nextM').addEventListener('click', () => {
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1);
+  renderCalendar();
+});
+document.querySelectorAll('th[data-key]').forEach((th) => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) sortAsc = !sortAsc;
+    else { sortKey = key; sortAsc = key === 'store' || key === 'optionName'; }
+    renderTable();
+  });
+});
+
+refreshCanEdit();
+loadData().catch((err) => {
+  document.getElementById('updated').textContent = '데이터 로드 실패: ' + err.message;
+});
+// 탬퍼몽키가 깔린 관리용 컴퓨터인지 확인
+setTimeout(() => sendToTracker({ type: 'ping' }), 300);
+setTimeout(() => { if (!bridgeOk) sendToTracker({ type: 'ping' }); }, 2000);
+// 1분마다 판매 인정 내역만 가볍게 다시 읽어서 다른 컴퓨터에서 바꾼 내용 반영
+setInterval(async () => {
+  if (saving || !items.length || document.hidden) return;
+  const appr = await loadApproved();
+  if (saving) return;
+  if (JSON.stringify([...appr].sort()) !== JSON.stringify([...approved].sort())) { approved = appr; renderAll(); }
+}, 60 * 1000);
+// 10분마다 최신 데이터로 자동 새로고침 (두 컴퓨터 화면이 계속 같게)
+setInterval(() => { loadData(true).catch(() => {}); }, 10 * 60 * 1000);
+</script>
+</body>
+</html>
